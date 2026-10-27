@@ -18,7 +18,18 @@ jobs:
         with:
           gradle-version: '8.7'
       - name: Build
-        run: gradle assembleDebug --stacktrace
+        run: |
+          set +e
+          gradle assembleDebug --stacktrace > build.log 2>&1
+          echo "GRADLE_EXIT=$?" >> "$GITHUB_ENV"
+      - name: Report errors
+        if: always()
+        run: |
+          grep -E '^e: |error:|Unresolved reference|Could not resolve|What went wrong' build.log | head -30 | while IFS= read -r line; do echo "::error::${line}"; done
+          exit 0
+      - name: Fail if build failed
+        if: env.GRADLE_EXIT != '0'
+        run: exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
