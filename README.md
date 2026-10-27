@@ -1,4 +1,4 @@
-# Mobo Launcher (prototype 0.1.0)
+# Mobo Launcher (prototype 0.2.0 - desktop redesign)
 
 Kotlin + Jetpack Compose launcher prototype for an Android TV box. Original design; no Apple assets.
 
@@ -39,3 +39,12 @@ and recovery. The original launcher stays untouched.
 - Pointer/air-mouse behavior, focus restoration and performance are unverified on the real device.
 - Document picker may be missing on some TV firmware; a toast is shown if so.
 - Default-launcher setup, auto-start, boot logo/animation are out of scope.
+
+## 0.2.0 changes (not yet built or tested)
+- Clean desktop: wallpaper, optional clock and optional desktop shortcuts. No automatic grid of all apps.
+- Persistent, customizable Dock (pin/unpin, reorder, size, magnify, labels). First run seeds a default set.
+- Separate Library screen (all apps, search on touch devices, sort, hide, pin/desktop actions).
+- Original, procedurally drawn wallpapers and a consistent rounded-plate icon style (no third-party artwork).
+- Settings: General, Appearance, Dock, Desktop, Library, About. All values persist in SharedPreferences.
+- Layout auto-detects TV vs phone (override in Settings > General). Portrait and landscape handled via window insets.
+- Not verified on a physical Android Box. Real glass blur is not used (translucent gradients instead).
