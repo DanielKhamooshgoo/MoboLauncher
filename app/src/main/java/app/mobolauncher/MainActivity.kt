@@ -276,9 +276,9 @@ fun SettingsScreen(
         item { SectionTitle("Wallpaper", pal) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                WALLPAPERS.forEach { w -> Chip(w.name, prefs.wallpaper == w.id, pal, i) { prefs.setWallpaper(w.id) } }
+                WALLPAPERS.forEach { w -> Chip(w.name, prefs.wallpaper == w.id, pal, i) { prefs.selectWallpaper(w.id) } }
                 if (prefs.customUri != null) {
-                    Chip("My image", prefs.wallpaper == "custom", pal, i) { prefs.setWallpaper("custom") }
+                    Chip("My image", prefs.wallpaper == "custom", pal, i) { prefs.selectWallpaper("custom") }
                 }
                 Chip("Choose image…", false, pal, i) {
                     try { picker.launch(arrayOf("image/*")) }
@@ -289,16 +289,16 @@ fun SettingsScreen(
         item { SectionTitle("Theme", pal) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Chip("Dark", prefs.theme == "dark", pal, i) { prefs.setTheme("dark") }
-                Chip("Light", prefs.theme == "light", pal, i) { prefs.setTheme("light") }
+                Chip("Dark", prefs.theme == "dark", pal, i) { prefs.selectTheme("dark") }
+                Chip("Light", prefs.theme == "light", pal, i) { prefs.selectTheme("light") }
             }
         }
         item { SectionTitle("Animation", pal) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Chip("Off", prefs.anim == 0, pal, i) { prefs.setAnim(0) }
-                Chip("Low", prefs.anim == 1, pal, i) { prefs.setAnim(1) }
-                Chip("Normal", prefs.anim == 2, pal, i) { prefs.setAnim(2) }
+                Chip("Off", prefs.anim == 0, pal, i) { prefs.selectAnim(0) }
+                Chip("Low", prefs.anim == 1, pal, i) { prefs.selectAnim(1) }
+                Chip("Normal", prefs.anim == 2, pal, i) { prefs.selectAnim(2) }
             }
         }
         item { SectionTitle("Dock apps (select to add or remove)", pal) }
