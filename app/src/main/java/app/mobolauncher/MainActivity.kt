@@ -96,7 +96,7 @@ fun LauncherApp(prefs: LauncherPrefs, tick: Int) {
     val pal = palette(prefs.theme)
     val dockApps = remember(apps, prefs.favorites) {
         if (prefs.favorites.isEmpty()) apps.take(6)
-        else { val by = apps.associateBy { it.pkg }; prefs.favorites.mapNotNull { by[it] } }
+        else { val lookup = apps.associateBy { it.pkg }; prefs.favorites.mapNotNull { lookup[it] } }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -256,7 +256,7 @@ fun SettingsScreen(
         if (uri != null) {
             try {
                 ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (_: Exception) { }
+            } catch (e: Exception) { }
             prefs.setCustom(uri.toString())
         }
     }
