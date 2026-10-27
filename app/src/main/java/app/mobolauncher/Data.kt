@@ -109,13 +109,13 @@ class LauncherPrefs(ctx: Context) {
     /** 0 = off, 1 = low, 2 = normal. */
     val intensity: Float get() = when (anim) { 0 -> 0f; 2 -> 1f; else -> 0.6f }
 
-    fun setWallpaper(id: String) { wallpaper = id; sp.edit().putString("wallpaper", id).apply() }
+    fun selectWallpaper(id: String) { wallpaper = id; sp.edit().putString("wallpaper", id).apply() }
     fun setCustom(uri: String) {
         customUri = uri; wallpaper = "custom"
         sp.edit().putString("customUri", uri).putString("wallpaper", "custom").apply()
     }
-    fun setTheme(t: String) { theme = t; sp.edit().putString("theme", t).apply() }
-    fun setAnim(a: Int) { anim = a; sp.edit().putInt("anim", a).apply() }
+    fun selectTheme(t: String) { theme = t; sp.edit().putString("theme", t).apply() }
+    fun selectAnim(a: Int) { anim = a; sp.edit().putInt("anim", a).apply() }
     fun toggleFavorite(pkg: String, base: List<String>) {
         favorites = if (pkg in base) base - pkg else base + pkg
         sp.edit().putString("favs", favorites.joinToString(",")).apply()
