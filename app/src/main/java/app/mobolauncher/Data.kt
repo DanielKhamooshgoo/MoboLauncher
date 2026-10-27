@@ -48,16 +48,19 @@ fun loadApps(ctx: Context): List<AppEntry> {
 object IconCache {
     private val map = ConcurrentHashMap<String, ImageBitmap>()
 
-    suspend fun get(ctx: Context, app: AppEntry): ImageBitmap =
-        map[app.pkg] ?: withContext(Dispatchers.Default) {
-            val bmp = try {
+    suspend fun get(ctx: Context, app: AppEntry): ImageBitmap {
+        map[app.pkg]?.let { return it }
+        return withContext(Dispatchers.Default) {
+            val raw: Bitmap = try {
                 app.info.loadIcon(ctx.packageManager).toBitmap(160, 160, Bitmap.Config.ARGB_8888)
             } catch (e: Exception) {
                 Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-            }.asImageBitmap()
+            }
+            val bmp = raw.asImageBitmap()
             map[app.pkg] = bmp
             bmp
         }
+    }
 }
 
 data class Wallpaper(val id: String, val name: String, val top: Color, val bottom: Color)
