@@ -8,14 +8,24 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "app.mobolauncher"
-        minSdk = 28
-        targetSdk = 33
-        versionCode = 1
-        versionName = "0.1.0"
+        applicationId = "app.mobolauncher.macos"
+        minSdk = 21
+        targetSdk = 28
+        versionCode = 10
+        versionName = "0.2.0-macos-rebuild"
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            enableV1Signing = true
+            enableV2Signing = true
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release { isMinifyEnabled = false }
     }
     compileOptions {
@@ -24,7 +34,6 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
-    // Compose compiler 1.5.14 pairs with Kotlin 1.9.24
     composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
 }
 
