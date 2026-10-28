@@ -1,9 +1,9 @@
-name: Build debug APK
+name: Build MoboLauncher GPT APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, MoboLauncher-gpt]
 
 jobs:
   build:
@@ -17,33 +17,31 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-      - name: Build
+
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace
+
+      - name: Validate APK package, SDK, alignment and signature
+        shell: bash
         run: |
-          set +e
-          gradle assembleDebug --stacktrace > build.log 2>&1
-          echo "GRADLE_EXIT=$?" >> "$GITHUB_ENV"
-      - name: Inspect APK
-        if: always()
-        run: |
-          APK=app/build/outputs/apk/debug/app-debug.apk
-          if [ -f "$APK" ]; then
-            BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-            echo "::notice::APK bytes: $(stat -c%s "$APK")"
-            echo "::notice::$("$BT"/aapt2 dump badging "$APK" | grep -E 'package:|sdkVersion|targetSdkVersion' | tr '\n' ' ')"
-            if "$BT"/zipalign -c 4 "$APK"; then echo "::notice::zipalign ok"; else echo "::warning::zipalign FAILED"; fi
-            echo "::notice::$("$BT"/apksigner verify --verbose "$APK" 2>&1 | head -6 | tr '\n' ' ')"
-          else
-            echo "::error::APK file not found"
-          fi
-      - name: Report errors
-        if: always()
-        run: |
-          grep -E '^e: |error:|Unresolved reference|Could not resolve|What went wrong' build.log | head -30 | while IFS= read -r line; do echo "::error::${line}"; done
-          exit 0
-      - name: Fail if build failed
-        if: env.GRADLE_EXIT != '0'
-        run: exit 1
-      - uses: actions/upload-artifact@v4
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          BT="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          echo "APK_BYTES=$(stat -c%s "$APK")"
+          file "$APK"
+          unzip -t "$APK" | tail -1
+          "$BT/aapt2" dump badging "$APK" | tee apk-badging.txt
+          grep -E "^(package:|sdkVersion:|targetSdkVersion:)" apk-badging.txt
+          "$BT/zipalign" -c 4 "$APK"
+          "$BT/apksigner" verify --verbose --print-certs "$APK"
+          echo "APK validation passed."
+
+      - name: Upload GPT APK and diagnostics
+        uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: MoboLauncher-gpt-APK-and-diagnostics
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk-badging.txt
+          if-no-files-found: error
