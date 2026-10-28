@@ -31,7 +31,7 @@ jobs:
           file "$APK"
           unzip -t "$APK"
           "$ANDROID_HOME/build-tools/34.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
-          grep -q "package: name='app.mobolauncher.macos'" apk-badging.txt
+          grep -q "package: name='app.mobolauncher'" apk-badging.txt
           "$ANDROID_HOME/build-tools/34.0.0/zipalign" -c -v 4 "$APK"
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs "$APK"
           echo "APK validation passed"
