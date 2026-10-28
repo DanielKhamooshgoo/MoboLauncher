@@ -66,7 +66,7 @@ object IconCache {
 data class Wallpaper(val id: String, val name: String, val top: Color, val bottom: Color)
 
 val WALLPAPERS = listOf(
-    Wallpaper("aurora", "Aurora", Color(0xFF1B2A49), Color(0xFF5B3F8C)),
+    Wallpaper("aurora", "macOS Blue", Color(0xFF80C7ED), Color(0xFF073BC0)),
     Wallpaper("dusk", "Dusk", Color(0xFF2B1B3D), Color(0xFFD9774B)),
     Wallpaper("graphite", "Graphite", Color(0xFF151515), Color(0xFF3A3A3C)),
     Wallpaper("sand", "Sand", Color(0xFFE9DFCF), Color(0xFFB8A38A)),
