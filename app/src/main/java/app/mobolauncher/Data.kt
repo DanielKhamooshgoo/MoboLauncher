@@ -102,14 +102,16 @@ class LauncherPrefs(ctx: Context) {
     var customUri by mutableStateOf(sp.getString("customUri", null)); private set
     var theme by mutableStateOf(sp.getString("theme", "dark") ?: "dark"); private set
     var anim by mutableStateOf(sp.getInt("anim", 1)); private set
-    var idleTimeoutMinutes by mutableStateOf(sp.getInt("idleTimeoutMinutes", 2)); private set\n    var favorites by mutableStateOf(
+    var idleTimeoutMinutes by mutableStateOf(sp.getInt("idleTimeoutMinutes", 2)); private set
+    var favorites by mutableStateOf(
         (sp.getString("favs", "") ?: "").split(",").filter { it.isNotBlank() }
     ); private set
 
     /** 0 = off, 1 = low, 2 = normal. */
     val intensity: Float get() = when (anim) { 0 -> 0f; 2 -> 1f; else -> 0.6f }
 
-    fun selectIdleTimeout(minutes: Int) { idleTimeoutMinutes = minutes; sp.edit().putInt("idleTimeoutMinutes", minutes).apply() }\n    fun selectWallpaper(id: String) { wallpaper = id; sp.edit().putString("wallpaper", id).apply() }
+    fun selectIdleTimeout(minutes: Int) { idleTimeoutMinutes = minutes; sp.edit().putInt("idleTimeoutMinutes", minutes).apply() }
+    fun selectWallpaper(id: String) { wallpaper = id; sp.edit().putString("wallpaper", id).apply() }
     fun setCustom(uri: String) {
         customUri = uri; wallpaper = "custom"
         sp.edit().putString("customUri", uri).putString("wallpaper", "custom").apply()
