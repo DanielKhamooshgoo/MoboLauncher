@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "app.mobolauncher"
-        minSdk = 28
+        minSdk = 26
         targetSdk = 33
         versionCode = 1
         versionName = "0.1.0"

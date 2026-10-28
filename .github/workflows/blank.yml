@@ -22,6 +22,19 @@ jobs:
           set +e
           gradle assembleDebug --stacktrace > build.log 2>&1
           echo "GRADLE_EXIT=$?" >> "$GITHUB_ENV"
+      - name: Inspect APK
+        if: always()
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          if [ -f "$APK" ]; then
+            BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+            echo "::notice::APK bytes: $(stat -c%s "$APK")"
+            echo "::notice::$("$BT"/aapt2 dump badging "$APK" | grep -E 'package:|sdkVersion|targetSdkVersion' | tr '\n' ' ')"
+            if "$BT"/zipalign -c 4 "$APK"; then echo "::notice::zipalign ok"; else echo "::warning::zipalign FAILED"; fi
+            echo "::notice::$("$BT"/apksigner verify --verbose "$APK" 2>&1 | head -6 | tr '\n' ' ')"
+          else
+            echo "::error::APK file not found"
+          fi
       - name: Report errors
         if: always()
         run: |
