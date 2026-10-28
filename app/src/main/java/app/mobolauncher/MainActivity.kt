@@ -44,8 +44,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.awaitPointerEvent
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -198,6 +196,7 @@ fun HomeScreen(
             if (message != null) BasicText(message, style = TextStyle(color = pal.text, fontSize = 14.sp))
             if (dockApps.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
+                val dockIconSize = (maxHeight * 0.073f).coerceIn(32.dp, if (compact) 45.dp else 60.dp)
                 Row(
                     Modifier.align(Alignment.CenterHorizontally).clip(RoundedCornerShape(25.dp))
                         .background(Brush.verticalGradient(listOf(pal.panel.copy(alpha = 0.88f), pal.panel.copy(alpha = 0.52f))))
@@ -205,10 +204,9 @@ fun HomeScreen(
                         .padding(horizontal = if (compact) 7.dp else 14.dp, vertical = if (compact) 7.dp else 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 9.dp), verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val icon = (maxHeight * 0.073f).coerceIn(32.dp, if (compact) 45.dp else 60.dp)
-                    dockApps.forEach { app -> AppTile(app, icon, false, pal, prefs.intensity) { onLaunch(app) } }
-                    Box(Modifier.width(1.dp).height(icon * 0.65f).background(pal.text.copy(alpha = 0.22f)))
-                    DesktopShortcut("Applications", "▦", (icon * 0.78f).coerceIn(28.dp, 44.dp), pal, onLibrary, compactLabel = true)
+                    dockApps.forEach { app -> AppTile(app, dockIconSize, false, pal, prefs.intensity) { onLaunch(app) } }
+                    Box(Modifier.width(1.dp).height(dockIconSize * 0.65f).background(pal.text.copy(alpha = 0.22f)))
+                    DesktopShortcut("Applications", "▦", (dockIconSize * 0.78f).coerceIn(28.dp, 44.dp), pal, onLibrary, compactLabel = true)
                 }
             }
         }
@@ -228,7 +226,7 @@ fun DesktopShortcut(label: String, glyph: String, iconSize: Dp, pal: Palette, on
         Box(Modifier.size(iconSize).clip(RoundedCornerShape(iconSize * 0.25f))
             .background(Brush.linearGradient(listOf(Color(0xFF8AB4F8), Color(0xFF6558C7))))
             .border(1.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(iconSize * 0.25f)), contentAlignment = Alignment.Center) {
-            BasicText(glyph, style = TextStyle(color = Color.White, fontSize = iconSize.value * 0.55f, fontWeight = FontWeight.Medium))
+            BasicText(glyph, style = TextStyle(color = Color.White, fontSize = (iconSize.value * 0.55f).sp, fontWeight = FontWeight.Medium))
         }
         if (!compactLabel) BasicText(label, Modifier.padding(top = 6.dp), style = TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium))
     }
@@ -340,7 +338,7 @@ fun SettingsScreen(
         SettingItem("general", "General", "Launcher setup and information", "⚙")
     )
     val title = pages.firstOrNull { it.id == page }?.title ?: "Settings"
-    Box(Modifier.fillMaxSize().background(Color(0xB8171920)), contentAlignment = Alignment.Center) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xB8171920)), contentAlignment = Alignment.Center) {
         BoxWithConstraints(Modifier.fillMaxWidth(if (maxWidth < 650.dp) 0.96f else 0.78f)
             .fillMaxHeight(if (maxHeight < 500.dp) 0.96f else 0.90f).clip(RoundedCornerShape(28.dp))
             .background(if (prefs.theme == "light") Color(0xFFF2F2F7) else Color(0xFF202126))
