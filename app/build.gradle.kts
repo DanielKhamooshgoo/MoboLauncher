@@ -8,11 +8,12 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "app.mobolauncher"
+        // Separate application ID so the GPT test build can coexist with the original.
+        applicationId = "app.mobolauncher.gpt"
         minSdk = 26
         targetSdk = 33
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.1.0-gpt"
     }
 
     buildTypes {
