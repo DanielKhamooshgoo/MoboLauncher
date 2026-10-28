@@ -3,6 +3,7 @@ package app.mobolauncher
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.media.AudioManager
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -78,6 +79,8 @@ fun LauncherApp(prefs: LauncherPrefs, tick: Int) {
     var screen by remember { mutableStateOf("home") }
     var settingsPage by remember { mutableStateOf("root") }
     var idle by remember { mutableStateOf(false) }
+    var controlCenter by remember { mutableStateOf(false) }
+    var powerMenu by remember { mutableStateOf(false) }
     var idleReturnScreen by remember { mutableStateOf("home") }
     var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val interact: () -> Unit = { lastInteraction = System.currentTimeMillis(); if (idle) idle = false }
@@ -115,6 +118,59 @@ fun LauncherApp(prefs: LauncherPrefs, tick: Int) {
             onLibrary = { screen = "library"; interact() },
             onLaunch = { app -> interact(); launchApp(ctx, app) }
         )
+        AnimatedVisibility(
+            visible = screen == "home" && !idle,
+            enter = fadeIn(tween(220)),
+            exit = fadeOut(tween(140)),
+            modifier = Modifier.align(Alignment.TopCenter)
+        ) {
+            MacMenuBar(
+                onControlCenter = { controlCenter = !controlCenter; powerMenu = false; interact() },
+                onPower = { powerMenu = !powerMenu; controlCenter = false; interact() },
+                onSettings = { screen = "settings"; settingsPage = "root"; interact() },
+                onHome = { screen = "home"; interact() }
+            )
+        }
+        AnimatedVisibility(
+            visible = controlCenter && screen == "home" && !idle,
+            enter = fadeIn(tween(180)) + scaleIn(initialScale = 0.96f, animationSpec = tween(220)),
+            exit = fadeOut(tween(130)) + scaleOut(targetScale = 0.98f, animationSpec = tween(150)),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            ControlCenterPanel(
+                onDismiss = { controlCenter = false },
+                onSettings = { controlCenter = false; screen = "settings"; settingsPage = "root"; interact() },
+                onConnectivity = {
+                    controlCenter = false
+                    try { ctx.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    catch (_: Exception) { Toast.makeText(ctx, "Open Android Settings to change connectivity.", Toast.LENGTH_SHORT).show() }
+                },
+                onSound = {
+                    try { (ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager).adjustVolume(AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI) }
+                    catch (_: Exception) {}
+                }
+            )
+        }
+        AnimatedVisibility(
+            visible = powerMenu && screen == "home" && !idle,
+            enter = fadeIn(tween(160)) + scaleIn(initialScale = 0.92f, animationSpec = tween(180)),
+            exit = fadeOut(tween(120)) + scaleOut(targetScale = 0.96f, animationSpec = tween(140)),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            PowerMenu(
+                onDismiss = { powerMenu = false },
+                onSleep = { powerMenu = false; idleReturnScreen = "home"; idle = true },
+                onSettings = {
+                    powerMenu = false
+                    try { ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    catch (_: Exception) { Toast.makeText(ctx, "Open device settings from Android.", Toast.LENGTH_SHORT).show() }
+                },
+                onShutdown = {
+                    powerMenu = false
+                    Toast.makeText(ctx, "Full shutdown/restart requires system-level Android TV permission. Use the device's physical power menu.", Toast.LENGTH_LONG).show()
+                }
+            )
+        }
         AnimatedVisibility(
             visible = screen == "library" && !idle,
             enter = fadeIn(tween(190)) + scaleIn(initialScale = 0.92f, animationSpec = tween(240)),
@@ -163,6 +219,112 @@ fun requestDefaultHome(ctx: Context) {
     }
 }
 
+
+@Composable
+fun MacMenuBar(onControlCenter: () -> Unit, onPower: () -> Unit, onSettings: () -> Unit, onHome: () -> Unit) {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(15_000) } }
+    val clock = remember(now) { SimpleDateFormat("EEE MMM d  h:mm a", Locale.getDefault()).format(Date(now)) }
+    Row(
+        Modifier.fillMaxWidth().height(38.dp)
+            .background(Brush.verticalGradient(listOf(Color(0xB52C7FA8), Color(0x99256C9D))))
+            .border(width = 0.5.dp, color = Color.White.copy(alpha = 0.20f)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BasicText("  ", Modifier.clickable(onClick = onPower).padding(horizontal = 8.dp), style = TextStyle(color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold))
+        BasicText("Finder", Modifier.clickable(onClick = onHome).padding(horizontal = 5.dp), style = TextStyle(color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+        BasicText("File", Modifier.clickable(onClick = onHome).padding(horizontal = 7.dp), style = TextStyle(color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp))
+        BasicText("Edit", Modifier.clickable(onClick = onHome).padding(horizontal = 7.dp), style = TextStyle(color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp))
+        BasicText("View", Modifier.clickable(onClick = onHome).padding(horizontal = 7.dp), style = TextStyle(color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp))
+        BasicText("Go", Modifier.clickable(onClick = onHome).padding(horizontal = 7.dp), style = TextStyle(color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp))
+        Spacer(Modifier.weight(1f))
+        BasicText("⌕", Modifier.clickable(onClick = onSettings).padding(horizontal = 9.dp), style = TextStyle(color = Color.White, fontSize = 17.sp))
+        BasicText("◉", Modifier.clickable(onClick = onControlCenter).padding(horizontal = 8.dp), style = TextStyle(color = Color.White, fontSize = 16.sp))
+        BasicText("⏻", Modifier.clickable(onClick = onPower).padding(horizontal = 10.dp), style = TextStyle(color = Color.White, fontSize = 16.sp))
+        BasicText(clock, Modifier.padding(end = 12.dp), style = TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium))
+    }
+}
+
+@Composable
+fun ControlCenterPanel(onDismiss: () -> Unit, onSettings: () -> Unit, onConnectivity: () -> Unit, onSound: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.12f)).clickable { onDismiss() }, contentAlignment = Alignment.TopEnd) {
+        Column(
+            Modifier.padding(top = 45.dp, end = 18.dp).widthIn(max = 390.dp).fillMaxWidth(0.42f)
+                .clip(RoundedCornerShape(27.dp))
+                .background(Brush.linearGradient(listOf(Color(0xE7D9F0FA), Color(0xD7A8D5F0), Color(0xD7B8C8F4))))
+                .border(1.dp, Color.White.copy(alpha = 0.58f), RoundedCornerShape(27.dp))
+                .clickable(enabled = false) {}.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BasicText("Control Center", style = TextStyle(color = Color(0xFF17334A), fontSize = 20.sp, fontWeight = FontWeight.Bold))
+                Spacer(Modifier.weight(1f))
+                BasicText("×", Modifier.clickable(onClick = onDismiss).padding(4.dp), style = TextStyle(color = Color(0xFF17334A), fontSize = 24.sp))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ControlTile("Wi-Fi", "Connectivity", "◉", Modifier.weight(1f), onConnectivity)
+                ControlTile("Bluetooth", "Device settings", "ᛒ", Modifier.weight(1f), onConnectivity)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ControlTile("Focus", "Appearance", "☾", Modifier.weight(1f), onSettings)
+                ControlTile("Display", "Display settings", "☼", Modifier.weight(1f), onSettings)
+            }
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.43f)).clickable(onClick = onSound).padding(15.dp)) {
+                BasicText("Sound", style = TextStyle(color = Color(0xFF17334A), fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
+                BasicText("−  ━━━━━━━━━━━━━━━  +", Modifier.padding(top = 8.dp), style = TextStyle(color = Color(0xFF286B9C), fontSize = 16.sp))
+            }
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.43f)).clickable(onClick = onSettings).padding(15.dp)) {
+                BasicText("System settings", style = TextStyle(color = Color(0xFF17334A), fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
+                BasicText("Open launcher preferences", Modifier.padding(top = 4.dp), style = TextStyle(color = Color(0xFF37566C), fontSize = 12.sp))
+            }
+            BasicText("Some controls open Android settings because TV firmware controls access to hardware toggles.", style = TextStyle(color = Color(0xFF37566C), fontSize = 10.sp))
+        }
+    }
+}
+
+@Composable
+fun ControlTile(title: String, subtitle: String, symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(Brush.linearGradient(listOf(Color(0xFF6DA9D0), Color(0xFF3D82B7))))
+        .clickable(onClick = onClick).padding(13.dp).heightIn(min = 68.dp), verticalArrangement = Arrangement.Center) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BasicText(symbol, style = TextStyle(color = Color.White, fontSize = 22.sp))
+            Spacer(Modifier.width(7.dp))
+            Column {
+                BasicText(title, style = TextStyle(color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+                BasicText(subtitle, style = TextStyle(color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp))
+            }
+        }
+    }
+}
+
+@Composable
+fun PowerMenu(onDismiss: () -> Unit, onSleep: () -> Unit, onSettings: () -> Unit, onShutdown: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.28f)).clickable { onDismiss() }, contentAlignment = Alignment.Center) {
+        Column(Modifier.widthIn(max = 330.dp).fillMaxWidth(0.68f).clip(RoundedCornerShape(26.dp))
+            .background(Brush.verticalGradient(listOf(Color(0xE9E9F1FA), Color(0xE5C8D8EA))))
+            .border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(26.dp)).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            BasicText("Power", style = TextStyle(color = Color(0xFF1C2D40), fontSize = 22.sp, fontWeight = FontWeight.Bold))
+            PowerRow("Sleep / Screen saver", "Show the macOS-style clock", "◷", onSleep)
+            PowerRow("System settings", "Open device settings", "⚙", onSettings)
+            PowerRow("Shut down / Restart", "Requires device-level permission", "⏻", onShutdown)
+            BasicText("Cancel", Modifier.align(Alignment.End).clip(RoundedCornerShape(12.dp)).clickable(onClick = onDismiss).padding(horizontal = 14.dp, vertical = 8.dp), style = TextStyle(color = Color(0xFF286B9C), fontSize = 14.sp, fontWeight = FontWeight.Bold))
+        }
+    }
+}
+
+@Composable
+fun PowerRow(title: String, subtitle: String, symbol: String, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.48f)).clickable(onClick = onClick).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        BasicText(symbol, style = TextStyle(color = Color(0xFF286B9C), fontSize = 22.sp))
+        Spacer(Modifier.width(12.dp))
+        Column {
+            BasicText(title, style = TextStyle(color = Color(0xFF1C2D40), fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
+            BasicText(subtitle, style = TextStyle(color = Color(0xFF526B80), fontSize = 11.sp))
+        }
+    }
+}
+
 @Composable
 fun WallpaperLayer(prefs: LauncherPrefs) {
     val ctx = LocalContext.current
@@ -186,7 +348,7 @@ fun HomeScreen(
         val compact = maxWidth < 700.dp
         val availableHeight = maxHeight
         val desktopIcon = (availableHeight * 0.085f).coerceIn(38.dp, if (compact) 56.dp else 72.dp)
-        Column(Modifier.fillMaxSize().padding(horizontal = if (compact) 18.dp else 40.dp, vertical = if (compact) 18.dp else 26.dp)) {
+        Column(Modifier.fillMaxSize().padding(start = if (compact) 18.dp else 40.dp, end = if (compact) 18.dp else 40.dp, top = if (compact) 46.dp else 52.dp, bottom = if (compact) 18.dp else 26.dp)) {
             Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(if (compact) 16.dp else 24.dp), verticalAlignment = Alignment.Top) {
                 DesktopShortcut("Settings", "⚙", desktopIcon, pal, onSettings)
