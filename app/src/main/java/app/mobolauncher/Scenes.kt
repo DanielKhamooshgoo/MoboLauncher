@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import kotlin.math.sin
@@ -82,6 +83,48 @@ private fun DrawScope.drawBloom() {
     blob(w * 0.55f, h * 0.85f, h * 0.75f, Color(0xFF29D3C7))
 }
 
+
+private fun DrawScope.drawWave() {
+    val w = size.width
+    val h = size.height
+    drawRect(
+        Brush.linearGradient(
+            listOf(Color(0xFF4C9BDA), Color(0xFFB9C4CF), Color(0xFFD9C9A3)),
+            start = Offset(w * 0.55f, 0f), end = Offset(0f, h * 0.75f),
+        )
+    )
+    // distant pale hill, lower left
+    val hill = Path().apply {
+        moveTo(0f, h * 0.70f)
+        cubicTo(w * 0.10f, h * 0.52f, w * 0.26f, h * 0.55f, w * 0.38f, h * 0.68f)
+        lineTo(w * 0.38f, h)
+        lineTo(0f, h)
+        close()
+    }
+    drawPath(hill, Brush.verticalGradient(listOf(Color(0xFF39B3C9), Color(0xFF2B6FD8)), startY = h * 0.5f, endY = h))
+    // main sweeping wave
+    val wave = Path().apply {
+        moveTo(0f, h * 0.96f)
+        cubicTo(w * 0.40f, h * 0.70f, w * 0.62f, h * 0.20f, w * 1.02f, 0f)
+        lineTo(w, h)
+        lineTo(0f, h)
+        close()
+    }
+    drawPath(wave, Brush.linearGradient(listOf(Color(0xFF2C6BE0), Color(0xFF0B2FA8), Color(0xFF071A6E)), start = Offset(w * 0.5f, h * 0.2f), end = Offset(w * 0.6f, h)))
+    // soft highlight lobe
+    val lc = Offset(w * 0.62f, h * 0.62f)
+    drawCircle(Brush.radialGradient(listOf(Color(0xFF7FB8F5).copy(alpha = 0.65f), Color.Transparent), center = lc, radius = h * 0.55f), radius = h * 0.55f, center = lc)
+    // glassy rim along the crest
+    val rim = Path().apply {
+        moveTo(0f, h * 0.96f)
+        cubicTo(w * 0.40f, h * 0.70f, w * 0.62f, h * 0.20f, w * 1.02f, 0f)
+    }
+    drawPath(rim, Color.White.copy(alpha = 0.55f), style = Stroke(width = h * 0.004f))
+    // pale mound, lower right
+    val mound = Offset(w * 0.98f, h * 1.02f)
+    drawCircle(Brush.radialGradient(listOf(Color(0xFFBFD3E6).copy(alpha = 0.85f), Color.Transparent), center = mound, radius = h * 0.5f), radius = h * 0.5f, center = mound)
+}
+
 @Composable
 fun SceneCanvas(id: String, modifier: Modifier = Modifier) {
     Canvas(modifier) {
@@ -89,6 +132,7 @@ fun SceneCanvas(id: String, modifier: Modifier = Modifier) {
             "lake_day" -> drawLake(false)
             "lake_night" -> drawLake(true)
             "bloom" -> drawBloom()
+            "wave" -> drawWave()
             else -> drawRect(Brush.verticalGradient(listOf(Color(0xFF101012), Color(0xFF3A3A3F))))
         }
     }

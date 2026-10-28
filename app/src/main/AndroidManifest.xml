@@ -27,6 +27,8 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|smallestScreenSize|screenLayout|density|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -37,10 +39,14 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
             <!--
-              Default-launcher capability is intentionally NOT declared in this prototype.
-              Adding android.intent.action.MAIN + category.HOME + category.DEFAULT is a
-              separate, approval-gated step (see README).
+              Home-app eligibility. This only makes the launcher selectable as the Home app.
+              Android (or the user, via Settings) decides whether it becomes the default.
             -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>

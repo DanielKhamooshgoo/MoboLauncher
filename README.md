@@ -1,4 +1,4 @@
-# Mobo Launcher (prototype 0.2.0 - desktop redesign)
+# Mobo Launcher (prototype 0.3.0 - Tahoe-style refinement)
 
 Kotlin + Jetpack Compose launcher prototype for an Android TV box. Original design; no Apple assets.
 
@@ -48,3 +48,15 @@ and recovery. The original launcher stays untouched.
 - Settings: General, Appearance, Dock, Desktop, Library, About. All values persist in SharedPreferences.
 - Layout auto-detects TV vs phone (override in Settings > General). Portrait and landscape handled via window insets.
 - Not verified on a physical Android Box. Real glass blur is not used (translucent gradients instead).
+
+## 0.3.0 changes (not yet built or tested)
+- Eligible as the Home app (HOME + DEFAULT intent filter). It never becomes default by itself:
+  Settings > General starts Android's own chooser, and the status shown is read from Android.
+- Idle screen after a configurable time (default 2 min, in-app only): large clock, any input dismisses it.
+- Settings rebuilt in an iPhone Settings style: grouped rows, subpages, animated navigation.
+- Applications and Settings open as animated windows over a dimmed (optionally blurred) desktop.
+- Date banner removed; two desktop icons (System Settings, Applications) take its place.
+- Icon sizes derive from the window size (Dims in Data.kt); non-square icons keep their aspect ratio.
+- Android toasts replaced by in-app message pills. New original "Wave" wallpaper.
+- To undo default-launcher: Android Settings > Apps > Default apps > Home app (wording varies), or
+  uninstall this app.
