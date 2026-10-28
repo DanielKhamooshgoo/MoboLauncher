@@ -8,11 +8,11 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "app.mobolauncher.macos"
-        minSdk = 21
-        targetSdk = 28
-        versionCode = 10
-        versionName = "0.2.0-macos-rebuild"
+        applicationId = "app.mobolauncher"
+        minSdk = 28
+        targetSdk = 33
+        versionCode = 11
+        versionName = "0.3.0-macos"
     }
 
     signingConfigs {
