@@ -109,10 +109,14 @@ private fun DrawScope.drawGlyph(kind: Glyph, c: Color) {
     val stroke = Stroke(width = s * 0.09f, cap = StrokeCap.Round, join = StrokeJoin.Round)
     val mid = Offset(s * 0.5f, s * 0.5f)
     fun p(x: Float, y: Float) = Offset(s * x, s * y)
-    fun poly(vararg pts: Offset, close: Boolean = false): Path {
+    fun poly(vararg v: Float, close: Boolean = false): Path {
         val path = Path()
-        path.moveTo(pts[0].x, pts[0].y)
-        for (i in 1 until pts.size) path.lineTo(pts[i].x, pts[i].y)
+        path.moveTo(s * v[0], s * v[1])
+        var i = 2
+        while (i + 1 < v.size) {
+            path.lineTo(s * v[i], s * v[i + 1])
+            i += 2
+        }
         if (close) path.close()
         return path
     }
@@ -126,7 +130,7 @@ private fun DrawScope.drawGlyph(kind: Glyph, c: Color) {
             drawArc(c, -90f, 180f, true, topLeft = p(0.22f, 0.22f), size = Size(s * 0.56f, s * 0.56f))
         }
         Glyph.Wallpaper -> {
-            drawPath(poly(p(0.14f, 0.76f), p(0.40f, 0.40f), p(0.56f, 0.62f), p(0.68f, 0.48f), p(0.86f, 0.76f), close = true), c)
+            drawPath(poly(0.14f, 0.76f, 0.40f, 0.40f, 0.56f, 0.62f, 0.68f, 0.48f, 0.86f, 0.76f, close = true), c)
             drawCircle(c, s * 0.07f, p(0.72f, 0.26f))
         }
         Glyph.Apps -> {
@@ -146,7 +150,7 @@ private fun DrawScope.drawGlyph(kind: Glyph, c: Color) {
             drawLine(c, p(0.36f, 0.79f), p(0.64f, 0.79f), strokeWidth = s * 0.08f, cap = StrokeCap.Round)
         }
         Glyph.Navigation -> {
-            drawPath(poly(p(0.50f, 0.16f), p(0.78f, 0.82f), p(0.50f, 0.66f), p(0.22f, 0.82f), close = true), c)
+            drawPath(poly(0.50f, 0.16f, 0.78f, 0.82f, 0.50f, 0.66f, 0.22f, 0.82f, close = true), c)
         }
         Glyph.General, Glyph.Gear -> {
             drawCircle(c, s * 0.20f, mid, style = Stroke(width = s * 0.10f))
@@ -156,11 +160,11 @@ private fun DrawScope.drawGlyph(kind: Glyph, c: Color) {
                 }
             }
         }
-        Glyph.Check -> drawPath(poly(p(0.22f, 0.54f), p(0.42f, 0.72f), p(0.80f, 0.28f)), c, style = stroke)
-        Glyph.Chevron -> drawPath(poly(p(0.36f, 0.20f), p(0.64f, 0.50f), p(0.36f, 0.80f)), c, style = stroke)
-        Glyph.Back -> drawPath(poly(p(0.64f, 0.20f), p(0.36f, 0.50f), p(0.64f, 0.80f)), c, style = stroke)
-        Glyph.Up -> drawPath(poly(p(0.20f, 0.64f), p(0.50f, 0.36f), p(0.80f, 0.64f)), c, style = stroke)
-        Glyph.Down -> drawPath(poly(p(0.20f, 0.36f), p(0.50f, 0.64f), p(0.80f, 0.36f)), c, style = stroke)
+        Glyph.Check -> drawPath(poly(0.22f, 0.54f, 0.42f, 0.72f, 0.80f, 0.28f), c, style = stroke)
+        Glyph.Chevron -> drawPath(poly(0.36f, 0.20f, 0.64f, 0.50f, 0.36f, 0.80f), c, style = stroke)
+        Glyph.Back -> drawPath(poly(0.64f, 0.20f, 0.36f, 0.50f, 0.64f, 0.80f), c, style = stroke)
+        Glyph.Up -> drawPath(poly(0.20f, 0.64f, 0.50f, 0.36f, 0.80f, 0.64f), c, style = stroke)
+        Glyph.Down -> drawPath(poly(0.20f, 0.36f, 0.50f, 0.64f, 0.80f, 0.36f), c, style = stroke)
         Glyph.Plus -> {
             drawLine(c, p(0.50f, 0.22f), p(0.50f, 0.78f), strokeWidth = s * 0.09f, cap = StrokeCap.Round)
             drawLine(c, p(0.22f, 0.50f), p(0.78f, 0.50f), strokeWidth = s * 0.09f, cap = StrokeCap.Round)
