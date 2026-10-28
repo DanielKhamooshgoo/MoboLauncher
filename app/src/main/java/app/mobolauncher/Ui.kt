@@ -375,7 +375,7 @@ fun AppTile(
     val hot = rememberHot()
     val icon = rememberIcon(app)
     val scale by animateFloatAsState(
-        if (hot.active) 1f + 0.06f * ui.intensity else 1f,
+        if (hot.active) 1f + 0.08f * ui.intensity else 1f,
         tween(if (ui.intensity == 0f) 0 else 120), label = "tile",
     )
     val shape = RoundedCornerShape(size * 0.3f)
@@ -446,7 +446,7 @@ fun DockSlot(
     modifier: Modifier = Modifier, onClick: () -> Unit, content: @Composable () -> Unit,
 ) {
     val hot = rememberHot()
-    val target = if (hot.active && prefs.dockMagnify) 1f + 0.22f * ui.intensity else 1f
+    val target = if (hot.active && prefs.dockMagnify) 1f + 0.28f * ui.intensity else 1f
     val scale by animateFloatAsState(target, tween(if (ui.intensity == 0f) 0 else 140), label = "dock")
     val ringShape = RoundedCornerShape(iconSize * 0.24f)
     Column(
