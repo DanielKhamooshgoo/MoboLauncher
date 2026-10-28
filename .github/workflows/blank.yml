@@ -1,9 +1,12 @@
-name: Build debug APK
+name: Build macOS-inspired Launcher APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [macos-launcher-rebuild]
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -17,20 +20,25 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
-      - name: Build
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace
+      - name: Validate APK package, alignment and signatures
+        shell: bash
         run: |
-          set +e
-          gradle assembleDebug --stacktrace > build.log 2>&1
-          echo "GRADLE_EXIT=$?" >> "$GITHUB_ENV"
-      - name: Report errors
-        if: always()
-        run: |
-          grep -E '^e: |error:|Unresolved reference|Could not resolve|What went wrong' build.log | head -30 | while IFS= read -r line; do echo "::error::${line}"; done
-          exit 0
-      - name: Fail if build failed
-        if: env.GRADLE_EXIT != '0'
-        run: exit 1
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          file "$APK"
+          unzip -t "$APK"
+          "$ANDROID_HOME/build-tools/34.0.0/aapt" dump badging "$APK" | tee apk-badging.txt
+          grep -q "package: name='app.mobolauncher.macos'" apk-badging.txt
+          "$ANDROID_HOME/build-tools/34.0.0/zipalign" -c -v 4 "$APK"
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs "$APK"
+          echo "APK validation passed"
       - uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: macos-launcher-rebuild-apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk-badging.txt
+          if-no-files-found: error
