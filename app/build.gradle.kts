@@ -10,13 +10,25 @@ android {
     defaultConfig {
         // Separate application ID so the GPT test build can coexist with the original.
         applicationId = "app.mobolauncher.gpt"
-        minSdk = 26
+        // Broaden compatibility with older Android TV boxes.
+        minSdk = 21
         targetSdk = 33
-        versionCode = 1
-        versionName = "0.1.0-gpt"
+        versionCode = 2
+        versionName = "0.1.1-gpt"
+    }
+
+    // Some older TV-box package installers handle legacy APK signatures more reliably.
+    signingConfigs {
+        getByName("debug") {
+            enableV1Signing = true
+            enableV2Signing = true
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release { isMinifyEnabled = false }
     }
     compileOptions {
