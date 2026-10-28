@@ -184,7 +184,8 @@ fun HomeScreen(
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxWidth < 700.dp
-        val desktopIcon = (maxHeight * 0.085f).coerceIn(38.dp, if (compact) 56.dp else 72.dp)
+        val availableHeight = maxHeight
+        val desktopIcon = (availableHeight * 0.085f).coerceIn(38.dp, if (compact) 56.dp else 72.dp)
         Column(Modifier.fillMaxSize().padding(horizontal = if (compact) 18.dp else 40.dp, vertical = if (compact) 18.dp else 26.dp)) {
             Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(if (compact) 16.dp else 24.dp), verticalAlignment = Alignment.Top) {
@@ -196,7 +197,7 @@ fun HomeScreen(
             if (message != null) BasicText(message, style = TextStyle(color = pal.text, fontSize = 14.sp))
             if (dockApps.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
-                val dockIconSize = (maxHeight * 0.073f).coerceIn(32.dp, if (compact) 45.dp else 60.dp)
+                val dockIconSize = (availableHeight * 0.073f).coerceIn(32.dp, if (compact) 45.dp else 60.dp)
                 Row(
                     Modifier.align(Alignment.CenterHorizontally).clip(RoundedCornerShape(25.dp))
                         .background(Brush.verticalGradient(listOf(pal.panel.copy(alpha = 0.88f), pal.panel.copy(alpha = 0.52f))))
