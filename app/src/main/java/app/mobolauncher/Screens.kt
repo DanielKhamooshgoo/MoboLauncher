@@ -31,9 +31,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import java.time.LocalDateTime
 import kotlin.math.abs
-import java.time.format.DateTimeFormatter
 
 class AppsState(val apps: List<AppEntry>, val loading: Boolean, val error: String?)
 
@@ -43,12 +41,15 @@ val SettingsBase = androidx.compose.ui.graphics.Color(0xFF8E8E93)
 val AppsBase = androidx.compose.ui.graphics.Color(0xFF0A84FF)
 
 @Composable
-fun rememberNow(): State<LocalDateTime> = produceState(LocalDateTime.now()) {
+fun rememberNow(): State<Long> = produceState(System.currentTimeMillis()) {
     while (true) {
-        value = LocalDateTime.now()
+        value = System.currentTimeMillis()
         delay(15_000L)
     }
 }
+
+fun formatTime(pattern: String, millis: Long): String =
+    java.text.SimpleDateFormat(pattern, java.util.Locale.getDefault()).format(java.util.Date(millis))
 
 fun swapPkgs(list: List<String>, a: String, b: String): List<String> {
     val m = list.toMutableList()
@@ -314,8 +315,8 @@ fun AppActions(app: AppEntry, prefs: LauncherPrefs, ui: Ui, d: Dims, modifier: M
 @Composable
 fun IdleScreen(prefs: LauncherPrefs, ui: Ui, d: Dims) {
     val now by rememberNow()
-    val timeFmt = DateTimeFormatter.ofPattern(if (prefs.clock24) "H:mm" else "h:mm")
-    val dateFmt = DateTimeFormatter.ofPattern("EEE MMM d")
+    val timeText = formatTime(if (prefs.clock24) "H:mm" else "h:mm", now)
+    val dateText = formatTime("EEE MMM d", now)
     val clockSize = if (d.compact) d.wDp * 0.24f else minOf(d.wDp * 0.17f, d.hDp * 0.30f)
     Box(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.22f)),
@@ -327,12 +328,12 @@ fun IdleScreen(prefs: LauncherPrefs, ui: Ui, d: Dims) {
         ) {
             if (prefs.idleShowDate) {
                 BasicText(
-                    now.format(dateFmt),
+                    dateText,
                     style = TextStyle(color = Color(0xFFDDF3FF), fontSize = (22 * d.fs).sp, fontWeight = FontWeight.Medium),
                 )
             }
             BasicText(
-                now.format(timeFmt),
+                timeText,
                 style = TextStyle(
                     brush = Brush.verticalGradient(listOf(Color.White, Color(0xFFBFE0FF))),
                     fontSize = clockSize.sp,

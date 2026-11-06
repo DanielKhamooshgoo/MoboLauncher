@@ -9,15 +9,41 @@ android {
 
     defaultConfig {
         applicationId = "app.mobolauncher"
-        minSdk = 26
+        minSdk = 21
         targetSdk = 33
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 4
+        versionName = "0.4.1"
+    }
+
+    // Same debug key on every build (the CI runner would otherwise create a new one each time),
+    // signed with both the legacy (v1) and the modern (v2) scheme for maximum installer support.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+            enableV1Signing = true
+            enableV2Signing = true
+        }
     }
 
     buildTypes {
+        debug { signingConfig = signingConfigs.getByName("debug") }
         release { isMinifyEnabled = false }
     }
+
+    // "std": plain app (no Home-app declaration). "home": same app, also selectable as the Home app.
+    flavorDimensions += "mode"
+    productFlavors {
+        create("std") { dimension = "mode" }
+        create("home") {
+            dimension = "mode"
+            applicationIdSuffix = ".home"
+            versionNameSuffix = "-home"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
