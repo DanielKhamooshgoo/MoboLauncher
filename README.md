@@ -60,3 +60,9 @@ and recovery. The original launcher stays untouched.
 - Android toasts replaced by in-app message pills. New original "Wave" wallpaper.
 - To undo default-launcher: Android Settings > Apps > Default apps > Home app (wording varies), or
   uninstall this app.
+
+## 0.4.0 changes (not yet built or tested)
+- Top bar removed. System Settings (gear) now lives in the Dock next to Applications; both have original icons.
+- Desktop icons stack on the right edge. Only one built-in wallpaper (original "Wave"); pick your own image in Settings.
+- Dock: springy fisheye magnification with neighbours, icon hop on launch, bar keeps a fixed height.
+- Windows open with a light spring animation. minSdk stays 26.

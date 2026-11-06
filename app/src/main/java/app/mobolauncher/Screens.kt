@@ -3,6 +3,7 @@ package app.mobolauncher
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
+import kotlin.math.abs
 import java.time.format.DateTimeFormatter
 
 class AppsState(val apps: List<AppEntry>, val loading: Boolean, val error: String?)
@@ -75,29 +77,14 @@ fun DesktopScreen(
             try { focus.requestFocus() } catch (e: Exception) { }
         }
     }
-    val now by rememberNow()
-    val barFmt = DateTimeFormatter.ofPattern(if (prefs.clock24) "EEE d MMM  HH:mm" else "EEE d MMM  h:mm a")
-    val tileCell = d.desktopIcon * 1.0f + (if (d.tv) 56.dp else 40.dp)
+    val tileCell = d.desktopIcon + (if (d.tv) 56.dp else 40.dp)
     val launch: (AppEntry) -> Unit = { app ->
         if (!launchApp(ctx, app, prefs)) hud("Can't open " + app.label + ".")
     }
 
-    Column(Modifier.fillMaxSize().padding(vertical = 12.dp)) {
-        // Menu bar
-        Row(
-            Modifier.fillMaxWidth().glass(ui, RoundedCornerShape(d.rM))
-                .padding(horizontal = 16.dp, vertical = (6 * d.fs).dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Box(Modifier.size((10 * d.fs).dp).clip(CircleShape).background(ui.accent))
-            Txt("Desktop", ui, 15f * d.fs, weight = FontWeight.SemiBold)
-            Spacer(Modifier.weight(1f))
-            if (prefs.showClock) Txt(now.format(barFmt), ui, 14f * d.fs, sub = true, maxLines = 1)
-        }
-
-        // Desktop icons
-        Box(Modifier.weight(1f).fillMaxWidth().padding(top = 18.dp)) {
+    Column(Modifier.fillMaxSize().padding(top = 16.dp, bottom = 10.dp)) {
+        // Desktop icons stack down the right edge, like a Mac desktop.
+        Box(Modifier.weight(1f).fillMaxWidth()) {
             val message = when {
                 st.loading -> "Loading apps…"
                 st.error != null -> "Couldn't read the app list: " + st.error
@@ -106,21 +93,15 @@ fun DesktopScreen(
             if (message != null) {
                 Txt(message, ui, 20f * d.fs, Modifier.align(Alignment.Center), align = TextAlign.Center)
             }
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(tileCell),
-                modifier = Modifier.fillMaxSize(if (d.compact) 1f else 0.55f).align(Alignment.TopStart),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Column(
+                Modifier.align(Alignment.TopEnd).width(tileCell).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (prefs.desktopShortcuts) {
-                    item {
-                        ShortcutTile("System Settings", Glyph.Gear, SettingsBase, ui, d, d.desktopIcon) { onOpenSettings() }
-                    }
-                    item {
-                        ShortcutTile("Applications", Glyph.Apps, AppsBase, ui, d, d.desktopIcon) { onOpenLibrary() }
-                    }
+                    ShortcutTile("Applications", ui, d, d.desktopIcon, onClick = onOpenLibrary) { s -> LaunchpadIcon(s) }
+                    ShortcutTile("System Settings", ui, d, d.desktopIcon, onClick = onOpenSettings) { s -> SystemSettingsIcon(s) }
                 }
-                items(desktopApps, key = { it.pkg }) { app ->
+                desktopApps.forEach { app ->
                     AppTile(app, ui, d, prefs, d.desktopIcon, true) { launch(app) }
                 }
             }
@@ -141,34 +122,56 @@ fun Dock(
             2 -> 1.2f
             else -> 1f
         }
-        val count = apps.size + 2
+        val slots = apps.size + 2
         val gap = d.dockIcon * 0.2f
-        val padH = 14.dp
-        val fit = (maxWidth - padH * 2 - gap * (count - 1) - (if (apps.isNotEmpty()) 12.dp else 0.dp)) / count
-        val iconSize = minOf(d.dockIcon * factor, fit).coerceAtLeast(34.dp)
-        val shape = RoundedCornerShape(iconSize * 0.42f)
+        val padH = 16.dp
+        // Reserve about one extra icon width so the magnified icons still fit on screen.
+        val fit = (maxWidth - padH * 2 - gap * (slots - 1) - 24.dp) / (slots + 1)
+        val base = minOf(d.dockIcon * factor, fit).coerceAtLeast(32.dp)
+        val shape = RoundedCornerShape(base * 0.42f)
+        var active by remember { mutableIntStateOf(-1) }
+
+        fun magnify(index: Int): Float {
+            if (!prefs.dockMagnify || active < 0) return 1f
+            val peak = when (abs(index - active)) {
+                0 -> 1.55f
+                1 -> 1.27f
+                2 -> 1.10f
+                else -> 1f
+            }
+            return 1f + (peak - 1f) * ui.intensity.coerceAtMost(1f)
+        }
 
         Row(
-            Modifier.glass(ui, shape)
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = padH, vertical = iconSize * 0.16f),
+            Modifier.padding(bottom = base * 0.04f)
+                .glassOpen(ui, shape)
+                .padding(horizontal = padH, vertical = base * 0.17f),
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(gap),
         ) {
-            DockSlot("Applications", ui, d, prefs, iconSize, Modifier.focusRequester(focus), onClick = onLibrary) {
-                IconTile(Glyph.Apps, AppsBase, iconSize)
-            }
+            DockSlot(
+                "Applications", ui, d, prefs, base, magnify(0), Modifier.focusRequester(focus),
+                onActive = { on -> if (on) { active = 0 } else if (active == 0) { active = -1 } },
+                onClick = onLibrary,
+            ) { s -> LaunchpadIcon(s) }
             if (apps.isNotEmpty()) {
-                Box(Modifier.size(1.dp, iconSize * 0.8f).background(ui.text.copy(alpha = 0.25f)))
+                Box(Modifier.size(1.dp, base * 0.8f).background(ui.text.copy(alpha = 0.25f)))
             }
-            apps.forEach { app ->
-                DockSlot(app.label, ui, d, prefs, iconSize, onClick = { onLaunch(app) }) {
-                    AppIconView(rememberIcon(app), iconSize, prefs.iconStyle, app.label)
-                }
+            apps.forEachIndexed { i, app ->
+                val idx = i + 1
+                DockSlot(
+                    app.label, ui, d, prefs, base, magnify(idx),
+                    onActive = { on -> if (on) { active = idx } else if (active == idx) { active = -1 } },
+                    onClick = { onLaunch(app) },
+                ) { s -> AppIconView(rememberIcon(app), s, prefs.iconStyle, app.label) }
             }
-            DockSlot("System Settings", ui, d, prefs, iconSize, onClick = onSettings) {
-                IconTile(Glyph.Gear, SettingsBase, iconSize)
-            }
+            Box(Modifier.size(1.dp, base * 0.8f).background(ui.text.copy(alpha = 0.25f)))
+            val settingsIdx = apps.size + 1
+            DockSlot(
+                "System Settings", ui, d, prefs, base, magnify(settingsIdx),
+                onActive = { on -> if (on) { active = settingsIdx } else if (active == settingsIdx) { active = -1 } },
+                onClick = onSettings,
+            ) { s -> SystemSettingsIcon(s) }
         }
     }
 }

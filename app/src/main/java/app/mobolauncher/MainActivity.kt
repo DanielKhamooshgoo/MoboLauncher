@@ -315,9 +315,11 @@ fun LauncherRoot(
                 Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = d.pad, vertical = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val enter = fadeIn(tween(240 * dur)) +
-                    scaleIn(initialScale = 0.92f, animationSpec = tween(280 * dur, easing = FastOutSlowInEasing))
-                val exit = fadeOut(tween(160 * dur)) + scaleOut(targetScale = 0.96f, animationSpec = tween(180 * dur))
+                // Windows pop open with a light spring, like macOS, and leave with a quick fade.
+                val scaleSpec: FiniteAnimationSpec<Float> =
+                    if (dur == 0) snap() else spring(dampingRatio = 0.78f, stiffness = 380f)
+                val enter = fadeIn(tween(200 * dur)) + scaleIn(initialScale = 0.90f, animationSpec = scaleSpec)
+                val exit = fadeOut(tween(140 * dur)) + scaleOut(targetScale = 0.94f, animationSpec = tween(160 * dur))
                 val heightFraction = if (d.short) 1f else 0.88f
                 AnimatedVisibility(visible = overlay == Overlay.Library, enter = enter, exit = exit) {
                     Box(

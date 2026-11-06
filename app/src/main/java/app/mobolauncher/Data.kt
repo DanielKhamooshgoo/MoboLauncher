@@ -192,7 +192,6 @@ class LauncherPrefs(ctx: Context) {
     var layoutMode by str("layoutMode", "auto")       // auto | tv | mobile
     var uiScale by int("uiScale", 1)                  // 0 small, 1 default, 2 large
     var clock24 by bool("clock24", true)
-    var showClock by bool("showClock", true)          // clock in the menu bar
     var libBlur by bool("libBlur", true)              // blur behind overlays (Android 12+)
     // Dock
     var dock by list("dock")
@@ -242,11 +241,7 @@ val ACCENT_NAMES = listOf("Blue", "Purple", "Pink", "Orange", "Green", "Graphite
 data class WallpaperDef(val id: String, val name: String)
 
 val WALLPAPERS = listOf(
-    WallpaperDef("wave", "Wave"),
-    WallpaperDef("lake_night", "Lakeside Night"),
-    WallpaperDef("lake_day", "Lakeside Day"),
-    WallpaperDef("bloom", "Bloom"),
-    WallpaperDef("graphite", "Graphite"),
+    WallpaperDef("wave", "Default"),
 )
 
 fun intensityOf(anim: Int): Float = when (anim) {

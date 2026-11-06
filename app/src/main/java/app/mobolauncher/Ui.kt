@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 val Squircle = RoundedCornerShape(percent = 22)
 
@@ -56,6 +58,11 @@ val LocalHud = staticCompositionLocalOf<(String) -> Unit> { { } }
 /** Translucent "glass" surface: soft gradient fill and a light edge. */
 fun Modifier.glass(ui: Ui, shape: Shape): Modifier = this
     .clip(shape)
+    .background(Brush.verticalGradient(listOf(ui.glassTop, ui.glassBottom)), shape)
+    .border(1.dp, Brush.verticalGradient(listOf(ui.strokeTop, ui.strokeBottom)), shape)
+
+/** Same look as glass() but without clipping, so magnified Dock icons can rise above the bar. */
+fun Modifier.glassOpen(ui: Ui, shape: Shape): Modifier = this
     .background(Brush.verticalGradient(listOf(ui.glassTop, ui.glassBottom)), shape)
     .border(1.dp, Brush.verticalGradient(listOf(ui.strokeTop, ui.strokeBottom)), shape)
 
@@ -411,15 +418,15 @@ fun AppTile(
 /** Desktop shortcut for a launcher feature (System Settings, Applications). */
 @Composable
 fun ShortcutTile(
-    label: String, glyph: Glyph, base: Color, ui: Ui, d: Dims, size: Dp,
-    modifier: Modifier = Modifier, onClick: () -> Unit,
+    label: String, ui: Ui, d: Dims, iconSize: Dp,
+    modifier: Modifier = Modifier, onClick: () -> Unit, icon: @Composable (Dp) -> Unit,
 ) {
     val hot = rememberHot()
     val scale by animateFloatAsState(
         if (hot.active) 1f + 0.06f * ui.intensity else 1f,
-        tween(if (ui.intensity == 0f) 0 else 120), label = "shortcut",
+        spring<Float>(dampingRatio = 0.7f, stiffness = 400f), label = "shortcut",
     )
-    val shape = RoundedCornerShape(size * 0.3f)
+    val shape = RoundedCornerShape(iconSize * 0.3f)
     Column(
         modifier.fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -428,43 +435,120 @@ fun ShortcutTile(
             .then(if (hot.focused) Modifier.border(2.dp, ui.ring, shape) else Modifier)
             .hoverable(hot.src)
             .clickable(interactionSource = hot.src, indication = null, onClick = onClick)
-            .padding(size * 0.14f),
+            .padding(iconSize * 0.14f),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        IconTile(glyph, base, size)
+        icon(iconSize)
         Txt(
-            label, ui, d.labelFor(size), Modifier.padding(top = size * 0.1f).fillMaxWidth(),
+            label, ui, d.labelFor(iconSize), Modifier.padding(top = iconSize * 0.1f).fillMaxWidth(),
             maxLines = 1, align = TextAlign.Center, shadow = true,
         )
     }
 }
 
-/** One Dock slot: hover/focus magnification, label tip, focus ring. */
+/**
+ * One Dock slot. Its width and icon size follow [magnify] (a springy, macOS-style fisheye that is
+ * computed by the Dock from the distance to the hovered or focused slot). Clicking makes the
+ * icon hop once. The slot keeps a fixed height, so the bar never grows: icons rise above it.
+ */
 @Composable
 fun DockSlot(
-    label: String, ui: Ui, d: Dims, prefs: LauncherPrefs, iconSize: Dp,
-    modifier: Modifier = Modifier, onClick: () -> Unit, content: @Composable () -> Unit,
+    label: String, ui: Ui, d: Dims, prefs: LauncherPrefs, baseSize: Dp, magnify: Float,
+    modifier: Modifier = Modifier, onActive: (Boolean) -> Unit, onClick: () -> Unit,
+    content: @Composable (Dp) -> Unit,
 ) {
     val hot = rememberHot()
-    val target = if (hot.active && prefs.dockMagnify) 1f + 0.22f * ui.intensity else 1f
-    val scale by animateFloatAsState(target, tween(if (ui.intensity == 0f) 0 else 140), label = "dock")
-    val ringShape = RoundedCornerShape(iconSize * 0.24f)
+    LaunchedEffect(hot.active) { onActive(hot.active) }
+    val animated by animateDpAsState(
+        baseSize * magnify,
+        if (ui.intensity == 0f) snap<Dp>() else spring<Dp>(dampingRatio = 0.62f, stiffness = 420f),
+        label = "dock-size",
+    )
+    val scope = rememberCoroutineScope()
+    val bounce = remember { Animatable(0f) }
+    val lift = with(LocalDensity.current) { (baseSize * 0.35f).toPx() }
+    val ringShape = RoundedCornerShape(animated * 0.24f)
     Column(
         modifier
-            .graphicsLayer { scaleX = scale; scaleY = scale; transformOrigin = TransformOrigin(0.5f, 1f) }
+            .graphicsLayer { translationY = bounce.value }
             .hoverable(hot.src)
-            .clickable(interactionSource = hot.src, indication = null, onClick = onClick),
+            .clickable(interactionSource = hot.src, indication = null) {
+                if (ui.intensity > 0f) {
+                    scope.launch {
+                        bounce.animateTo(-lift, tween<Float>(150, easing = FastOutSlowInEasing))
+                        bounce.animateTo(0f, spring<Float>(dampingRatio = 0.35f, stiffness = 300f))
+                    }
+                }
+                onClick()
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (d.tv || prefs.dockLabels) {
-            Box(Modifier.size(iconSize, (22 * d.fs).dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(animated, (22 * d.fs).dp), contentAlignment = Alignment.Center) {
                 if (hot.active || prefs.dockLabels) {
                     Txt(label, ui, 12f * d.fs, maxLines = 1, align = TextAlign.Center)
                 }
             }
         }
-        Box(Modifier.then(if (hot.focused) Modifier.border(2.dp, ui.ring, ringShape) else Modifier)) {
-            content()
+        Box(Modifier.size(animated, baseSize).wrapContentSize(Alignment.BottomCenter, unbounded = true)) {
+            Box(Modifier.then(if (hot.focused) Modifier.border(2.dp, ui.ring, ringShape) else Modifier)) {
+                content(animated)
+            }
+        }
+    }
+}
+
+// ------------------------------------------------------------------ system icons (original artwork)
+
+/** Gray gear icon for the launcher's Settings. A lookalike, not Apple's artwork. */
+@Composable
+fun SystemSettingsIcon(iconSize: Dp, modifier: Modifier = Modifier) {
+    Box(
+        modifier.size(iconSize).clip(Squircle)
+            .background(Brush.verticalGradient(listOf(Color(0xFFB7BBC2), Color(0xFF666971))))
+            .border(0.5.dp, Color.White.copy(alpha = 0.35f), Squircle),
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val s = this.size.minDimension
+            val c = Offset(s / 2f, s / 2f)
+            val silver = Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFD3D6DC)), startY = s * 0.15f, endY = s * 0.85f)
+            for (i in 0 until 12) {
+                rotate(i * 30f, c) {
+                    drawRoundRect(silver, Offset(s * 0.445f, s * 0.12f), androidx.compose.ui.geometry.Size(s * 0.11f, s * 0.18f), CornerRadius(s * 0.03f))
+                }
+            }
+            drawCircle(silver, s * 0.29f, c)
+            drawCircle(Color(0xFF7B7E86), s * 0.12f, c)
+            drawCircle(Color(0xFFC9CCD2), s * 0.12f, c, style = Stroke(width = s * 0.012f))
+        }
+    }
+}
+
+/** Colorful app-grid icon for the Applications library. */
+@Composable
+fun LaunchpadIcon(iconSize: Dp, modifier: Modifier = Modifier) {
+    val colors = listOf(
+        Color(0xFFFF5F57), Color(0xFFFF9F0A), Color(0xFFFFD60A),
+        Color(0xFF30D158), Color(0xFF64D2FF), Color(0xFF0A84FF),
+        Color(0xFFBF5AF2), Color(0xFFFF375F), Color(0xFF8E8E93),
+    )
+    Box(
+        modifier.size(iconSize).clip(Squircle)
+            .background(Brush.verticalGradient(listOf(Color(0xFFF3F4F7), Color(0xFFB7BCC6))))
+            .border(0.5.dp, Color.White.copy(alpha = 0.4f), Squircle),
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val s = this.size.minDimension
+            for (r in 0..2) {
+                for (q in 0..2) {
+                    drawRoundRect(
+                        colors[r * 3 + q],
+                        Offset(s * (0.17f + 0.23f * q), s * (0.17f + 0.23f * r)),
+                        androidx.compose.ui.geometry.Size(s * 0.19f, s * 0.19f),
+                        CornerRadius(s * 0.05f),
+                    )
+                }
+            }
         }
     }
 }

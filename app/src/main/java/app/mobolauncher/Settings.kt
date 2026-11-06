@@ -234,7 +234,7 @@ private fun LazyListScope.mainPage(
     onSetDefault: () -> Unit, go: (Page) -> Unit,
 ) {
     val themeName = when (prefs.theme) { "light" -> "Light"; "dark" -> "Dark"; else -> "Automatic" }
-    val wallName = if (prefs.wallpaper == "custom") "My image" else (WALLPAPERS.firstOrNull { it.id == prefs.wallpaper }?.name ?: "")
+    val wallName = if (prefs.wallpaper == "custom") "My image" else (WALLPAPERS.firstOrNull { it.id == prefs.wallpaper }?.name ?: "Default")
     val layoutName = when (prefs.layoutMode) { "tv" -> "TV"; "mobile" -> "Phone"; else -> "Auto" }
     val idleName = if (prefs.idleMinutes == 0) "Never" else prefs.idleMinutes.toString() + " min"
     val dockCount = prefs.dock.count { pkg -> st.apps.any { it.pkg == pkg } }
@@ -310,7 +310,7 @@ private fun LazyListScope.wallpaperPage(prefs: LauncherPrefs, ui: Ui, d: Dims, o
             row { i, n -> SetRow(ui, d, i, n, "Use My Image", check = prefs.wallpaper == "custom", onClick = { prefs.wallpaper = "custom" }) }
         }
     }
-    footer("Wallpapers are drawn by the launcher. Your own image is read through the system picker.", ui, d)
+    footer("The default wallpaper is drawn by the launcher. To use another picture, choose an image from your files.", ui, d)
 }
 
 private fun LazyListScope.displayPage(prefs: LauncherPrefs, ui: Ui, d: Dims) {
@@ -321,7 +321,6 @@ private fun LazyListScope.displayPage(prefs: LauncherPrefs, ui: Ui, d: Dims) {
     }
     gap()
     group {
-        row { i, n -> ToggleRow(ui, d, i, n, "Clock in menu bar", prefs.showClock) { prefs.showClock = it } }
         row { i, n -> ToggleRow(ui, d, i, n, "Blur behind windows", prefs.libBlur, "Blurs the desktop behind Applications and Settings. Needs Android 12 or newer.") { prefs.libBlur = it } }
     }
 }
