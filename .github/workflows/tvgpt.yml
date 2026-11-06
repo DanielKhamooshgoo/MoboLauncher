@@ -64,12 +64,18 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            set -euo pipefail
-            adb install -r app/build/outputs/apk/home/debug/app-home-debug.apk
+            # The action executes this script with /bin/sh (dash), not Bash.
+            # Keep it POSIX-compatible: pipefail is not supported by /bin/sh.
+            set -eu
+            APK="app/build/outputs/apk/home/debug/app-home-debug.apk"
+            test -s "$APK"
+            adb install -r "$APK"
             adb shell monkey -p app.mobolauncher.home 1
             sleep 8
-            adb shell dumpsys package app.mobolauncher.home | grep -E "versionName|versionCode"
-            adb shell dumpsys activity activities | grep -E "app.mobolauncher.home/.MainActivity|ResumedActivity"
+            adb shell dumpsys package app.mobolauncher.home > /tmp/tvgpt-package.txt
+            grep -E "versionName|versionCode" /tmp/tvgpt-package.txt
+            adb shell dumpsys activity activities > /tmp/tvgpt-activities.txt
+            grep -E "app.mobolauncher.home/.MainActivity|ResumedActivity" /tmp/tvgpt-activities.txt
 
       - name: Upload verified APKs and reports
         uses: actions/upload-artifact@v4
