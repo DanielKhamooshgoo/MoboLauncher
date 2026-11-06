@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build APKs and install on Android 12
+    name: Build APKs and verify Android Home eligibility
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -55,7 +55,7 @@ jobs:
             "$BT/apksigner" verify --verbose --print-certs "$APK" | tee "reports/$FLAVOR-signature.txt"
           done
 
-      - name: Install and launch Home flavor on Android 12 emulator
+      - name: Install standard APK and verify it is an Android Home candidate
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 31
@@ -63,15 +63,14 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          # This action launches each script line in a separate /bin/sh process.
-          # Keep the whole test in one nested shell so variables and set -e persist.
+          # Keep this test in one shell because the action runs script lines separately.
           script: |
-            sh -c 'set -eu; APK="$GITHUB_WORKSPACE/app/build/outputs/apk/home/debug/app-home-debug.apk"; test -s "$APK"; adb install -r "$APK"; adb shell monkey -p app.mobolauncher.home 1; sleep 8; adb shell dumpsys package app.mobolauncher.home > /tmp/tvgpt-package.txt; grep -E "versionName|versionCode" /tmp/tvgpt-package.txt; adb shell dumpsys activity activities > /tmp/tvgpt-activities.txt; grep -E "app.mobolauncher.home/.MainActivity|ResumedActivity" /tmp/tvgpt-activities.txt'
+            sh -c 'set -eu; APK="$GITHUB_WORKSPACE/app/build/outputs/apk/std/debug/app-std-debug.apk"; REPORTS="$GITHUB_WORKSPACE/reports"; test -s "$APK"; adb install -r "$APK"; adb shell cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME -c android.intent.category.DEFAULT | tee "$REPORTS/home-candidates.txt"; grep -Fq "app.mobolauncher" "$REPORTS/home-candidates.txt"; adb shell am start -n app.mobolauncher/.MainActivity; sleep 8; adb shell dumpsys package app.mobolauncher > "$REPORTS/installed-package.txt"; grep -E "versionName|versionCode" "$REPORTS/installed-package.txt"; adb exec-out screencap -p > "$REPORTS/home-screen.png"; test -s "$REPORTS/home-screen.png"'
 
-      - name: Upload verified APKs and reports
+      - name: Upload verified APKs, screenshots and reports
         uses: actions/upload-artifact@v4
         with:
-          name: tvgpt-android12-verified-apks
+          name: tvgpt-android12-home-verified
           path: |
             app/build/outputs/apk/home/debug/app-home-debug.apk
             app/build/outputs/apk/std/debug/app-std-debug.apk
