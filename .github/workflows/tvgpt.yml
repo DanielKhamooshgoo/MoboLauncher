@@ -63,19 +63,10 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
+          # This action launches each script line in a separate /bin/sh process.
+          # Keep the whole test in one nested shell so variables and set -e persist.
           script: |
-            # The action executes this script with /bin/sh (dash), not Bash.
-            # Keep it POSIX-compatible: pipefail is not supported by /bin/sh.
-            set -eu
-            APK="app/build/outputs/apk/home/debug/app-home-debug.apk"
-            test -s "$APK"
-            adb install -r "$APK"
-            adb shell monkey -p app.mobolauncher.home 1
-            sleep 8
-            adb shell dumpsys package app.mobolauncher.home > /tmp/tvgpt-package.txt
-            grep -E "versionName|versionCode" /tmp/tvgpt-package.txt
-            adb shell dumpsys activity activities > /tmp/tvgpt-activities.txt
-            grep -E "app.mobolauncher.home/.MainActivity|ResumedActivity" /tmp/tvgpt-activities.txt
+            sh -c 'set -eu; APK="$GITHUB_WORKSPACE/app/build/outputs/apk/home/debug/app-home-debug.apk"; test -s "$APK"; adb install -r "$APK"; adb shell monkey -p app.mobolauncher.home 1; sleep 8; adb shell dumpsys package app.mobolauncher.home > /tmp/tvgpt-package.txt; grep -E "versionName|versionCode" /tmp/tvgpt-package.txt; adb shell dumpsys activity activities > /tmp/tvgpt-activities.txt; grep -E "app.mobolauncher.home/.MainActivity|ResumedActivity" /tmp/tvgpt-activities.txt'
 
       - name: Upload verified APKs and reports
         uses: actions/upload-artifact@v4
