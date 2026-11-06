@@ -1,0 +1,87 @@
+name: tvgpt - Android 12 release validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tvgpt
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tvgpt-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build APK variants and validate Android 12 install
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout latest MoboLauncher source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build all debug variants
+        run: gradle --no-daemon clean assembleDebug --stacktrace
+
+      - name: Validate both APK packages and signatures
+        shell: bash
+        run: |
+          set -euo pipefail
+          BT="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          mkdir -p reports
+          for ITEM in "std:app/build/outputs/apk/std/debug/app-std-debug.apk:app.mobolauncher" "home:app/build/outputs/apk/home/debug/app-home-debug.apk:app.mobolauncher.home"; do
+            IFS=: read -r FLAVOR APK EXPECTED_PACKAGE <<< "$ITEM"
+            test -s "$APK"
+            echo "Validating $FLAVOR APK: $APK"
+            file "$APK" | tee -a reports/apk-files.txt
+            sha256sum "$APK" | tee -a reports/apk-sha256.txt
+            unzip -t "$APK" | tail -n 1
+            "$BT/aapt2" dump badging "$APK" > "reports/$FLAVOR-badging.txt"
+            grep -Fq "package: name='$EXPECTED_PACKAGE'" "reports/$FLAVOR-badging.txt"
+            grep -Fq "sdkVersion:'21'" "reports/$FLAVOR-badging.txt"
+            grep -Fq "targetSdkVersion:'33'" "reports/$FLAVOR-badging.txt"
+            "$BT/zipalign" -c -v 4 "$APK"
+            "$BT/apksigner" verify --verbose --print-certs "$APK" > "reports/$FLAVOR-signature.txt"
+            grep -Fq "Verified using v1 scheme (JAR signing): true" "reports/$FLAVOR-signature.txt"
+            grep -Fq "Verified using v2 scheme (APK Signature Scheme v2): true" "reports/$FLAVOR-signature.txt"
+          done
+
+      - name: Install and launch Home flavor on Android 12 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            set -e
+            adb install -r app/build/outputs/apk/home/debug/app-home-debug.apk
+            adb shell monkey -p app.mobolauncher.home 1
+            sleep 8
+            adb shell dumpsys package app.mobolauncher.home | grep -E "versionName|versionCode"
+            adb shell dumpsys activity activities | grep -E "app.mobolauncher.home/.MainActivity|ResumedActivity"
+
+      - name: Upload installable APKs and test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvgpt-android12-final-apks
+          path: |
+            app/build/outputs/apk/home/debug/app-home-debug.apk
+            app/build/outputs/apk/std/debug/app-std-debug.apk
+            reports/
+          if-no-files-found: error
+          retention-days: 30
