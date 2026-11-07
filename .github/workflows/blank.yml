@@ -20,13 +20,13 @@ jobs:
       - name: Build
         run: |
           set +e
-          gradle assembleStdDebug assembleHomeDebug assembleHfilterDebug :probe:assembleDebug --stacktrace > build.log 2>&1
+          gradle assembleStdDebug assemblePwrDebug --stacktrace > build.log 2>&1
           echo "GRADLE_EXIT=$?" >> "$GITHUB_ENV"
       - name: Inspect APKs
         if: always()
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          for APK in app/build/outputs/apk/std/debug/*.apk app/build/outputs/apk/home/debug/*.apk app/build/outputs/apk/hfilter/debug/*.apk probe/build/outputs/apk/debug/*.apk; do
+          for APK in app/build/outputs/apk/std/debug/*.apk app/build/outputs/apk/pwr/debug/*.apk; do
             [ -f "$APK" ] || continue
             echo "::notice::$APK bytes $(stat -c%s "$APK")"
             echo "::notice::$("$BT"/aapt2 dump badging "$APK" | grep -iE "package:|sdkversion" | tr '\n' ' ')"
@@ -46,6 +46,4 @@ jobs:
           name: app-debug-apk
           path: |
             app/build/outputs/apk/std/debug/*.apk
-            app/build/outputs/apk/home/debug/*.apk
-            app/build/outputs/apk/hfilter/debug/*.apk
-            probe/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/pwr/debug/*.apk

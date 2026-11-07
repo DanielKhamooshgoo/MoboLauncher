@@ -24,11 +24,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
@@ -37,6 +39,8 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
@@ -108,7 +112,7 @@ fun Txt(
 
 enum class Glyph {
     Dock, Appearance, Wallpaper, Apps, Idle, Display, Navigation, General, Gear,
-    Check, Chevron, Back, Up, Down, Plus, Minus,
+    Check, Chevron, Back, Up, Down, Plus, Minus, Sun, Moon, Power,
 }
 
 private fun DrawScope.drawGlyph(kind: Glyph, c: Color) {
@@ -177,6 +181,23 @@ private fun DrawScope.drawGlyph(kind: Glyph, c: Color) {
             drawLine(c, p(0.22f, 0.50f), p(0.78f, 0.50f), strokeWidth = s * 0.09f, cap = StrokeCap.Round)
         }
         Glyph.Minus -> drawLine(c, p(0.22f, 0.50f), p(0.78f, 0.50f), strokeWidth = s * 0.09f, cap = StrokeCap.Round)
+        Glyph.Sun -> {
+            drawCircle(c, s * 0.15f, mid)
+            for (i in 0 until 8) {
+                rotate(i * 45f, mid) {
+                    drawLine(c, p(0.5f, 0.15f), p(0.5f, 0.26f), strokeWidth = s * 0.07f, cap = StrokeCap.Round)
+                }
+            }
+        }
+        Glyph.Moon -> {
+            val outer = Path().apply { addOval(Rect(p(0.48f, 0.50f), s * 0.30f)) }
+            val inner = Path().apply { addOval(Rect(p(0.62f, 0.40f), s * 0.26f)) }
+            drawPath(Path.combine(PathOperation.Difference, outer, inner), c)
+        }
+        Glyph.Power -> {
+            drawArc(c, -60f, 300f, false, topLeft = p(0.24f, 0.28f), size = Size(s * 0.52f, s * 0.52f), style = stroke)
+            drawLine(c, p(0.5f, 0.14f), p(0.5f, 0.48f), strokeWidth = s * 0.09f, cap = StrokeCap.Round)
+        }
     }
 }
 
@@ -380,7 +401,6 @@ fun AppTile(
     onLongClick: (() -> Unit)? = null, onClick: () -> Unit,
 ) {
     val hot = rememberHot()
-    val icon = rememberIcon(app)
     val scale by animateFloatAsState(
         if (hot.active) 1f + 0.06f * ui.intensity else 1f,
         tween(if (ui.intensity == 0f) 0 else 120), label = "tile",
@@ -401,7 +421,7 @@ fun AppTile(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box {
-            AppIconView(icon, size, prefs.iconStyle, app.label)
+            AppIconFor(app, size, prefs)
             if (pinned) {
                 Box(Modifier.align(Alignment.TopEnd).size(9.dp).clip(CircleShape).background(ui.accent))
             }
@@ -563,5 +583,197 @@ fun HudPill(text: String, ui: Ui, d: Dims, modifier: Modifier = Modifier) {
             .padding(horizontal = (20 * d.fs).dp, vertical = (10 * d.fs).dp),
     ) {
         Txt(text, ui, 15f * d.fs, maxLines = 2)
+    }
+}
+
+// ------------------------------------------------------------------ macOS-style stand-in icons
+
+enum class MacKind { Settings, AppStore, Safari, Photos, Maps, Mail, Music, Files, Calculator, Camera, Clock }
+
+private fun polyPath(s: Float, vararg v: Float, close: Boolean = false): Path {
+    val path = Path()
+    path.moveTo(s * v[0], s * v[1])
+    var i = 2
+    while (i + 1 < v.size) {
+        path.lineTo(s * v[i], s * v[i + 1])
+        i += 2
+    }
+    if (close) path.close()
+    return path
+}
+
+private fun DrawScope.drawMacGlyph(kind: MacKind) {
+    val s = size.minDimension
+    val mid = Offset(s * 0.5f, s * 0.5f)
+    val white = Color.White
+    fun p(x: Float, y: Float) = Offset(s * x, s * y)
+    val round = StrokeCap.Round
+    when (kind) {
+        MacKind.Safari -> {
+            drawCircle(white.copy(alpha = 0.9f), s * 0.37f, mid, style = Stroke(width = s * 0.025f))
+            for (i in 0 until 12) {
+                rotate(i * 30f, mid) {
+                    drawLine(white.copy(alpha = 0.9f), p(0.5f, 0.14f), p(0.5f, if (i % 3 == 0) 0.20f else 0.17f), strokeWidth = s * 0.012f)
+                }
+            }
+            rotate(45f, mid) {
+                drawPath(polyPath(s, 0.5f, 0.20f, 0.58f, 0.5f, 0.42f, 0.5f, close = true), Color(0xFFFF3B30))
+                drawPath(polyPath(s, 0.5f, 0.80f, 0.58f, 0.5f, 0.42f, 0.5f, close = true), white)
+            }
+        }
+        MacKind.AppStore -> {
+            drawLine(white, p(0.50f, 0.22f), p(0.30f, 0.76f), strokeWidth = s * 0.09f, cap = round)
+            drawLine(white, p(0.50f, 0.22f), p(0.70f, 0.76f), strokeWidth = s * 0.09f, cap = round)
+            drawLine(white, p(0.34f, 0.62f), p(0.66f, 0.62f), strokeWidth = s * 0.08f, cap = round)
+        }
+        MacKind.Photos -> {
+            val cols = listOf(0xFFFF5F57, 0xFFFF9F0A, 0xFFFFD60A, 0xFF30D158, 0xFF64D2FF, 0xFF0A84FF, 0xFFBF5AF2, 0xFFFF375F)
+            for (i in 0 until 8) {
+                rotate(i * 45f, mid) {
+                    drawOval(Color(cols[i]).copy(alpha = 0.78f), p(0.38f, 0.13f), Size(s * 0.24f, s * 0.37f))
+                }
+            }
+        }
+        MacKind.Maps -> {
+            drawLine(white.copy(alpha = 0.9f), p(0.10f, 0.82f), p(0.90f, 0.22f), strokeWidth = s * 0.10f)
+            drawLine(Color(0xFFFFD60A).copy(alpha = 0.9f), p(0.10f, 0.30f), p(0.60f, 0.92f), strokeWidth = s * 0.05f)
+            drawCircle(Color(0xFFFF3B30), s * 0.17f, p(0.5f, 0.40f))
+            drawPath(polyPath(s, 0.37f, 0.50f, 0.63f, 0.50f, 0.5f, 0.76f, close = true), Color(0xFFFF3B30))
+            drawCircle(white, s * 0.065f, p(0.5f, 0.40f))
+        }
+        MacKind.Mail -> {
+            drawRoundRect(white, p(0.16f, 0.28f), Size(s * 0.68f, s * 0.46f), CornerRadius(s * 0.06f))
+            drawPath(
+                polyPath(s, 0.19f, 0.33f, 0.5f, 0.56f, 0.81f, 0.33f), Color(0xFF1E7BF0),
+                style = Stroke(width = s * 0.035f, cap = round, join = StrokeJoin.Round),
+            )
+        }
+        MacKind.Music -> {
+            drawCircle(white, s * 0.09f, p(0.38f, 0.70f))
+            drawCircle(white, s * 0.09f, p(0.66f, 0.64f))
+            drawLine(white, p(0.46f, 0.68f), p(0.46f, 0.30f), strokeWidth = s * 0.05f)
+            drawLine(white, p(0.74f, 0.62f), p(0.74f, 0.24f), strokeWidth = s * 0.05f)
+            drawLine(white, p(0.46f, 0.30f), p(0.74f, 0.24f), strokeWidth = s * 0.07f)
+        }
+        MacKind.Files -> {
+            drawRoundRect(white, p(0.16f, 0.30f), Size(s * 0.30f, s * 0.14f), CornerRadius(s * 0.04f))
+            drawRoundRect(white, p(0.16f, 0.38f), Size(s * 0.68f, s * 0.40f), CornerRadius(s * 0.06f))
+        }
+        MacKind.Calculator -> {
+            drawRoundRect(Color(0xFF8E8E93).copy(alpha = 0.6f), p(0.16f, 0.16f), Size(s * 0.68f, s * 0.20f), CornerRadius(s * 0.04f))
+            for (r in 0..2) {
+                for (q in 0..3) {
+                    val col = if (q == 3) Color(0xFFFF9F0A) else Color(0xFF6E6E73)
+                    drawRoundRect(col, p(0.16f + 0.175f * q, 0.42f + 0.16f * r), Size(s * 0.15f, s * 0.13f), CornerRadius(s * 0.03f))
+                }
+            }
+        }
+        MacKind.Camera -> {
+            drawRoundRect(white, p(0.14f, 0.32f), Size(s * 0.72f, s * 0.46f), CornerRadius(s * 0.07f))
+            drawRoundRect(white, p(0.34f, 0.25f), Size(s * 0.22f, s * 0.12f), CornerRadius(s * 0.03f))
+            drawCircle(Color(0xFF48484A), s * 0.15f, p(0.5f, 0.55f))
+            drawCircle(Color(0xFF8E8E93), s * 0.09f, p(0.5f, 0.55f))
+        }
+        MacKind.Clock -> {
+            drawCircle(white, s * 0.38f, mid)
+            for (i in 0 until 12) {
+                rotate(i * 30f, mid) {
+                    drawLine(Color.Black, p(0.5f, 0.15f), p(0.5f, if (i % 3 == 0) 0.22f else 0.19f), strokeWidth = s * 0.016f)
+                }
+            }
+            drawLine(Color.Black, mid, p(0.5f, 0.28f), strokeWidth = s * 0.04f, cap = round)
+            drawLine(Color.Black, mid, p(0.66f, 0.54f), strokeWidth = s * 0.04f, cap = round)
+            drawLine(Color(0xFFFF3B30), mid, p(0.5f, 0.74f), strokeWidth = s * 0.016f, cap = round)
+        }
+        MacKind.Settings -> Unit
+    }
+}
+
+/** A macOS-style icon, drawn here (original artwork that imitates the look, not Apple's files). */
+@Composable
+fun MacIcon(kind: MacKind, iconSize: Dp, modifier: Modifier = Modifier) {
+    if (kind == MacKind.Settings) {
+        SystemSettingsIcon(iconSize, modifier)
+        return
+    }
+    val bg: List<Color> = when (kind) {
+        MacKind.Safari -> listOf(Color(0xFF63D2FF), Color(0xFF0A74F0))
+        MacKind.AppStore -> listOf(Color(0xFF1FD0FF), Color(0xFF0A5CF5))
+        MacKind.Photos -> listOf(Color(0xFFFFFFFF), Color(0xFFE9EBF0))
+        MacKind.Maps -> listOf(Color(0xFF8BDD72), Color(0xFF3FB1EE))
+        MacKind.Mail -> listOf(Color(0xFF58BEFF), Color(0xFF0A5FE8))
+        MacKind.Music -> listOf(Color(0xFFFF7A8A), Color(0xFFFA2B43))
+        MacKind.Files -> listOf(Color(0xFF6CC8FF), Color(0xFF1F7FF0))
+        MacKind.Calculator -> listOf(Color(0xFF4A4A4E), Color(0xFF1C1C1E))
+        MacKind.Camera -> listOf(Color(0xFFA0A0A8), Color(0xFF4A4A50))
+        MacKind.Clock -> listOf(Color(0xFF1C1C1E), Color(0xFF000000))
+        MacKind.Settings -> listOf(Color.Gray, Color.Gray)
+    }
+    Box(
+        modifier.size(iconSize).clip(Squircle)
+            .background(Brush.verticalGradient(bg))
+            .border(0.5.dp, Color.White.copy(alpha = 0.35f), Squircle),
+    ) {
+        Canvas(Modifier.fillMaxSize()) { drawMacGlyph(kind) }
+    }
+}
+
+/** The icon shown for an installed app, following the "Icon style" setting. */
+@Composable
+fun AppIconFor(app: AppEntry, iconSize: Dp, prefs: LauncherPrefs) {
+    val kind = if (prefs.iconStyle == "macos") macKindFor(app.pkg, app.label) else null
+    if (kind != null) {
+        MacIcon(kind, iconSize)
+    } else {
+        val style = if (prefs.iconStyle == "original") "original" else "plate"
+        AppIconView(rememberIcon(app), iconSize, style, app.label)
+    }
+}
+
+// ------------------------------------------------------------------ menu bar pieces
+
+/** Small power button at the top left (opens the launcher menu). */
+@Composable
+fun LogoButton(ui: Ui, d: Dims, onClick: () -> Unit) {
+    val hot = rememberHot()
+    val shape = RoundedCornerShape(8.dp)
+    Box(
+        Modifier.clip(shape)
+            .background(if (hot.active) ui.glassTop else Color.Transparent)
+            .then(if (hot.focused) Modifier.border(2.dp, ui.ring, shape) else Modifier)
+            .hoverable(hot.src)
+            .clickable(interactionSource = hot.src, indication = null, onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        GlyphView(Glyph.Power, ui.text, (14 * d.fs).dp)
+    }
+}
+
+@Composable
+fun MenuItem(text: String, ui: Ui, d: Dims, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val hot = rememberHot()
+    val shape = RoundedCornerShape(6.dp)
+    Box(
+        modifier.fillMaxWidth().clip(shape)
+            .background(if (hot.active) ui.accent else Color.Transparent)
+            .hoverable(hot.src)
+            .clickable(interactionSource = hot.src, indication = null, onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = (6 * d.fs).dp),
+    ) {
+        Txt(text, ui, 14f * d.fs, maxLines = 1, color = if (hot.active) Color.White else null)
+    }
+}
+
+@Composable
+fun LauncherMenu(
+    ui: Ui, d: Dims, modifier: Modifier, firstFocus: FocusRequester,
+    onSettings: () -> Unit, onShutDown: () -> Unit,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Column(modifier.width((230 * d.fs).dp).clip(shape).background(ui.sheet).glass(ui, shape).padding(6.dp)) {
+        MenuItem("About Mobo Launcher", ui, d, Modifier.focusRequester(firstFocus), onSettings)
+        MenuItem("System Settings…", ui, d, onClick = onSettings)
+        Box(Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 8.dp).height(1.dp).background(ui.separator))
+        MenuItem("Shut Down…", ui, d, onClick = onShutDown)
     }
 }

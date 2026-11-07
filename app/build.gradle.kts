@@ -11,8 +11,8 @@ android {
         applicationId = "app.mobolauncher"
         minSdk = 21
         targetSdk = 33
-        versionCode = 4
-        versionName = "0.4.1"
+        versionCode = 5
+        versionName = "0.5.0"
     }
 
     // Same debug key on every build (the CI runner would otherwise create a new one each time),
@@ -33,20 +33,15 @@ android {
         release { isMinifyEnabled = false }
     }
 
-    // "std": plain app (no Home-app declaration). "home": same app, also selectable as the Home app.
+    // "std": the plain app. "pwr": same app plus an optional Accessibility helper that can open
+    // Android's power menu (separate build so "std" stays as simple as possible to install).
     flavorDimensions += "mode"
     productFlavors {
         create("std") { dimension = "mode" }
-        create("home") {
+        create("pwr") {
             dimension = "mode"
-            applicationIdSuffix = ".home"
-            versionNameSuffix = "-home"
-        }
-        // Diagnostic: Home filter only (no stateNotNeeded), to see what the box installer rejects.
-        create("hfilter") {
-            dimension = "mode"
-            applicationIdSuffix = ".hf"
-            versionNameSuffix = "-hf"
+            applicationIdSuffix = ".pwr"
+            versionNameSuffix = "-pwr"
         }
     }
 

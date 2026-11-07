@@ -251,20 +251,20 @@ private fun LazyListScope.mainPage(
         gap()
     }
     group {
-        row { i, n -> SetRow(ui, d, i, n, "Appearance", glyph = Glyph.Appearance, tint = Color(0xFF5E5CE6), value = themeName, chevron = true, onClick = { go(Page.Appearance) }) }
-        row { i, n -> SetRow(ui, d, i, n, "Wallpaper", glyph = Glyph.Wallpaper, tint = Color(0xFF32ADE6), value = wallName, chevron = true, onClick = { go(Page.Wallpaper) }) }
-        row { i, n -> SetRow(ui, d, i, n, "Display", glyph = Glyph.Display, tint = Color(0xFF0A84FF), value = layoutName, chevron = true, onClick = { go(Page.Display) }) }
+        row { i, n -> SetRow(ui, d, i, n, "Appearance", glyph = Glyph.Appearance, tint = Color(0xFF2C2C2E), value = themeName, chevron = true, onClick = { go(Page.Appearance) }) }
+        row { i, n -> SetRow(ui, d, i, n, "Wallpaper", glyph = Glyph.Wallpaper, tint = Color(0xFF2FA4E7), value = wallName, chevron = true, onClick = { go(Page.Wallpaper) }) }
+        row { i, n -> SetRow(ui, d, i, n, "Display", glyph = Glyph.Sun, tint = Color(0xFF0A84FF), value = layoutName, chevron = true, onClick = { go(Page.Display) }) }
     }
     gap()
     group {
-        row { i, n -> SetRow(ui, d, i, n, "Dock", glyph = Glyph.Dock, tint = Color(0xFF636366), value = dockCount.toString() + " apps", chevron = true, onClick = { go(Page.DockPage) }) }
-        row { i, n -> SetRow(ui, d, i, n, "Applications", glyph = Glyph.Apps, tint = Color(0xFFFF9F0A), value = st.apps.size.toString(), chevron = true, onClick = { go(Page.Apps) }) }
-        row { i, n -> SetRow(ui, d, i, n, "Idle Screen", glyph = Glyph.Idle, tint = Color(0xFFBF5AF2), value = idleName, chevron = true, onClick = { go(Page.Idle) }) }
+        row { i, n -> SetRow(ui, d, i, n, "Dock", glyph = Glyph.Dock, tint = Color(0xFF1C1C1E), value = dockCount.toString() + " apps", chevron = true, onClick = { go(Page.DockPage) }) }
+        row { i, n -> SetRow(ui, d, i, n, "Applications", icon = { LaunchpadIcon((30 * d.fs).dp) }, value = st.apps.size.toString(), chevron = true, onClick = { go(Page.Apps) }) }
+        row { i, n -> SetRow(ui, d, i, n, "Idle Screen", glyph = Glyph.Moon, tint = Color(0xFF5E5CE6), value = idleName, chevron = true, onClick = { go(Page.Idle) }) }
     }
     gap()
     group {
-        row { i, n -> SetRow(ui, d, i, n, "Navigation", glyph = Glyph.Navigation, tint = Color(0xFF30D158), chevron = true, onClick = { go(Page.Navigation) }) }
-        row { i, n -> SetRow(ui, d, i, n, "General", glyph = Glyph.General, tint = Color(0xFF8E8E93), chevron = true, onClick = { go(Page.General) }) }
+        row { i, n -> SetRow(ui, d, i, n, "Navigation", glyph = Glyph.Navigation, tint = Color(0xFF3A86FF), chevron = true, onClick = { go(Page.Navigation) }) }
+        row { i, n -> SetRow(ui, d, i, n, "General", icon = { SystemSettingsIcon((30 * d.fs).dp) }, chevron = true, onClick = { go(Page.General) }) }
     }
 }
 
@@ -290,11 +290,11 @@ private fun LazyListScope.appearancePage(prefs: LauncherPrefs, ui: Ui, d: Dims) 
     header("Surfaces and Icons", ui, d)
     group {
         row { i, n -> SegRow(ui, d, i, n, "Glass") { Seg(listOf("Subtle" to 0, "Regular" to 1, "Vivid" to 2), prefs.glass, ui, d) { prefs.glass = it } } }
-        row { i, n -> SegRow(ui, d, i, n, "Icon style") { Seg(listOf("Rounded plate" to "plate", "Original" to "original"), prefs.iconStyle, ui, d) { prefs.iconStyle = it } } }
+        row { i, n -> SegRow(ui, d, i, n, "Icon style") { Seg(listOf("macOS" to "macos", "Plate" to "plate", "Original" to "original"), prefs.iconStyle, ui, d) { prefs.iconStyle = it } } }
         row { i, n -> SegRow(ui, d, i, n, "Icon size") { Seg(listOf("Small" to 0, "Medium" to 1, "Large" to 2), prefs.iconSize, ui, d) { prefs.iconSize = it } } }
         row { i, n -> SegRow(ui, d, i, n, "Animations") { Seg(listOf("Off" to 0, "Low" to 1, "Normal" to 2), prefs.anim, ui, d) { prefs.anim = it } } }
     }
-    footer("Rounded plate gives every app the same shape and weight.", ui, d)
+    footer("macOS swaps common apps (browser, store, gallery, settings…) for macOS-style icons. Plate gives every other app the same shape.", ui, d)
 }
 
 private fun LazyListScope.wallpaperPage(prefs: LauncherPrefs, ui: Ui, d: Dims, onPickImage: () -> Unit) {
@@ -321,6 +321,7 @@ private fun LazyListScope.displayPage(prefs: LauncherPrefs, ui: Ui, d: Dims) {
     }
     gap()
     group {
+        row { i, n -> ToggleRow(ui, d, i, n, "Clock at top right", prefs.showClock) { prefs.showClock = it } }
         row { i, n -> ToggleRow(ui, d, i, n, "Blur behind windows", prefs.libBlur, "Blurs the desktop behind Applications and Settings. Needs Android 12 or newer.") { prefs.libBlur = it } }
     }
 }
@@ -342,7 +343,7 @@ private fun LazyListScope.dockPage(prefs: LauncherPrefs, ui: Ui, d: Dims, st: Ap
         groupOf(pinned, { "pin-" + it.pkg }) { app, i, n ->
             SetRow(
                 ui, d, i, n, app.label,
-                icon = { AppIconView(rememberIcon(app), (30 * d.fs).dp, prefs.iconStyle, null) },
+                icon = { AppIconFor(app, (30 * d.fs).dp, prefs) },
                 trailing = {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (i > 0) MiniButton(Glyph.Up, ui, d) { prefs.dock = swapPkgs(prefs.dock, app.pkg, pinned[i - 1].pkg) }
@@ -358,7 +359,7 @@ private fun LazyListScope.dockPage(prefs: LauncherPrefs, ui: Ui, d: Dims, st: Ap
     groupOf(candidates, { "add-" + it.pkg }) { app, i, n ->
         SetRow(
             ui, d, i, n, app.label,
-            icon = { AppIconView(rememberIcon(app), (30 * d.fs).dp, prefs.iconStyle, null) },
+            icon = { AppIconFor(app, (30 * d.fs).dp, prefs) },
             onClick = { if (prefs.dock.size < DOCK_MAX) prefs.dock = prefs.dock + app.pkg },
             trailing = { GlyphView(Glyph.Plus, ui.accent, (20 * d.fs).dp) },
         )
@@ -386,7 +387,7 @@ private fun LazyListScope.appsPage(prefs: LauncherPrefs, ui: Ui, d: Dims, st: Ap
         groupOf(onDesktop, { "dt-" + it.pkg }) { app, i, n ->
             SetRow(
                 ui, d, i, n, app.label,
-                icon = { AppIconView(rememberIcon(app), (30 * d.fs).dp, prefs.iconStyle, null) },
+                icon = { AppIconFor(app, (30 * d.fs).dp, prefs) },
                 onClick = { prefs.desktop = prefs.desktop - app.pkg },
                 trailing = { GlyphView(Glyph.Minus, ui.red, (20 * d.fs).dp) },
             )
@@ -400,7 +401,7 @@ private fun LazyListScope.appsPage(prefs: LauncherPrefs, ui: Ui, d: Dims, st: Ap
         groupOf(hiddenApps, { "hd-" + it.pkg }) { app, i, n ->
             SetRow(
                 ui, d, i, n, app.label, value = "Show",
-                icon = { AppIconView(rememberIcon(app), (30 * d.fs).dp, prefs.iconStyle, null) },
+                icon = { AppIconFor(app, (30 * d.fs).dp, prefs) },
                 onClick = { prefs.hidden = prefs.hidden - app.pkg },
             )
         }
@@ -410,7 +411,7 @@ private fun LazyListScope.appsPage(prefs: LauncherPrefs, ui: Ui, d: Dims, st: Ap
     groupOf(candidates, { "ad-" + it.pkg }) { app, i, n ->
         SetRow(
             ui, d, i, n, app.label,
-            icon = { AppIconView(rememberIcon(app), (30 * d.fs).dp, prefs.iconStyle, null) },
+            icon = { AppIconFor(app, (30 * d.fs).dp, prefs) },
             onClick = { prefs.desktop = prefs.desktop + app.pkg },
             trailing = { GlyphView(Glyph.Plus, ui.accent, (20 * d.fs).dp) },
         )
@@ -461,6 +462,25 @@ private fun LazyListScope.generalPage(
         else "This version does not register as a Home app, so Android will not offer it as the default launcher and the Home button keeps opening the device's own launcher.",
         ui, d,
     )
+    gap()
+    header("Power", ui, d)
+    group {
+        row { i, n ->
+            val ctx = LocalContext.current
+            val hud = LocalHud.current
+            val declared = remember { PowerHelper.declared(ctx) }
+            val open: () -> Unit = {
+                if (!PowerHelper.openAccessibilitySettings(ctx)) hud("Open Accessibility settings manually.")
+            }
+            SetRow(
+                ui, d, i, n, "Power menu helper",
+                value = if (declared) "Available" else "Not in this build",
+                chevron = declared,
+                onClick = if (declared) open else null,
+            )
+        }
+    }
+    footer("Lets the top-left menu open Android's own power menu (turn it on in Accessibility settings). Whether that menu offers Power off depends on the device.", ui, d)
     gap()
     header("About", ui, d)
     group {

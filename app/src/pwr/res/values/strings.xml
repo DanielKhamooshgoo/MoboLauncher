@@ -1,0 +1,4 @@
+<resources>
+    <string name="power_service_label">Mobo Launcher power menu</string>
+    <string name="power_service_desc">Lets the launcher open Android\'s power menu when you choose Shut Down. It does not read your screen.</string>
+</resources>

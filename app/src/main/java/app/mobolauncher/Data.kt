@@ -74,6 +74,37 @@ fun isDefaultLauncher(ctx: Context): Boolean {
     return ri?.activityInfo?.packageName == ctx.packageName
 }
 
+private val BROWSER_PACKAGES = setOf(
+    "com.android.chrome", "com.chrome.beta", "com.chrome.dev", "org.mozilla.firefox", "org.mozilla.firefox_beta",
+    "com.opera.browser", "com.opera.mini.native", "com.microsoft.emmx", "com.brave.browser",
+    "com.sec.android.app.sbrowser", "com.android.browser", "com.google.android.googlequicksearchbox",
+    "com.vivaldi.browser", "com.duckduckgo.mobile.android", "com.puffin.android",
+)
+
+/** Which macOS-style icon (if any) stands in for this app. Matching uses package names and labels. */
+fun macKindFor(pkg: String, label: String): MacKind? {
+    val p = pkg.lowercase()
+    val l = label.lowercase().trim()
+    fun has(vararg k: String): Boolean = k.any { it in l }
+    return when {
+        p == "com.android.settings" || p == "com.android.tv.settings" || p == "com.google.android.tvsettings" ||
+            l == "settings" || l == "تنظیمات" -> MacKind.Settings
+        p == "com.android.vending" || p == "cm.aptoide.pt" || has("play store", "app store", "گوگل پلی") -> MacKind.AppStore
+        p in BROWSER_PACKAGES || has("browser", "مرورگر") || l == "chrome" || l == "firefox" || l == "google" -> MacKind.Safari
+        p.startsWith("com.google.android.apps.photos") || p.contains("gallery") || p.contains("photos") ||
+            has("gallery", "photos", "گالری") -> MacKind.Photos
+        p == "com.google.android.apps.maps" || has("maps", "نقشه") -> MacKind.Maps
+        p == "com.google.android.gm" || p == "com.android.email" || has("gmail", "email", "mail") -> MacKind.Mail
+        p.contains("music") || has("music", "موسیقی", "spotify") -> MacKind.Music
+        p.contains("documentsui") || l == "files" || l == "file manager" || l == "file explorer" ||
+            has("files by google", "فایل") -> MacKind.Files
+        p.contains("calculator") || has("calculator", "ماشین حساب") -> MacKind.Calculator
+        p.contains(".camera") || has("camera", "دوربین") -> MacKind.Camera
+        p.contains("clock") || has("clock", "ساعت") -> MacKind.Clock
+        else -> null
+    }
+}
+
 /** True when this build declares a Home activity, i.e. Android could offer it as the Home app. */
 fun canBeHome(ctx: Context): Boolean {
     val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -191,13 +222,14 @@ class LauncherPrefs(ctx: Context) {
     var customUri by str("customUri", "")
     var accent by int("accent", 0)
     var glass by int("glass", 1)                      // 0 subtle, 1 regular, 2 vivid
-    var iconStyle by str("iconStyle", "plate")        // plate | original
+    var iconStyle by str("iconStyle", "macos")        // macos | plate | original
     var iconSize by int("iconSize", 1)                // 0 small, 1 medium, 2 large
     var anim by int("anim", 1)                        // 0 off, 1 low, 2 normal
     // Display
     var layoutMode by str("layoutMode", "auto")       // auto | tv | mobile
     var uiScale by int("uiScale", 1)                  // 0 small, 1 default, 2 large
     var clock24 by bool("clock24", true)
+    var showClock by bool("showClock", true)          // small clock at the top right
     var libBlur by bool("libBlur", true)              // blur behind overlays (Android 12+)
     // Dock
     var dock by list("dock")
@@ -248,6 +280,7 @@ data class WallpaperDef(val id: String, val name: String)
 
 val WALLPAPERS = listOf(
     WallpaperDef("wave", "Default"),
+    WallpaperDef("wwdc26", "WWDC26 Glow"),
 )
 
 fun intensityOf(anim: Int): Float = when (anim) {

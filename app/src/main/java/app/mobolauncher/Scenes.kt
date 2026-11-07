@@ -82,7 +82,39 @@ private fun DrawScope.drawWave() {
     )
 }
 
+
+// "Glow" wallpaper: an original glowing ring on black, inspired by the publicly described
+// WWDC26 theme ("All systems glow"). It is not Apple's artwork.
+private fun DrawScope.drawGlow() {
+    val w = size.width
+    val h = size.height
+    drawRect(Color(0xFF040408))
+    val c = Offset(w * 0.5f, h * 0.52f)
+    val r = h * 0.30f
+    drawCircle(
+        Brush.radialGradient(listOf(Color(0xFF6E3BFF).copy(alpha = 0.28f), Color.Transparent), center = c, radius = r * 2.6f),
+        radius = r * 2.6f, center = c,
+    )
+    val ring = Brush.sweepGradient(
+        listOf(
+            Color(0xFFFF4DA6), Color(0xFFFF9A3D), Color(0xFFFFE066), Color(0xFF52E0A8),
+            Color(0xFF3DB8FF), Color(0xFF8E5BFF), Color(0xFFFF4DA6),
+        ),
+        center = c,
+    )
+    for ((mult, a) in listOf(0.10f to 0.05f, 0.06f to 0.09f, 0.035f to 0.18f, 0.018f to 0.45f)) {
+        drawCircle(ring, r, c, alpha = a, style = Stroke(width = h * mult))
+    }
+    drawCircle(ring, r, c, style = Stroke(width = h * 0.008f))
+    drawCircle(ring, r * 1.12f, c, alpha = 0.35f, style = Stroke(width = h * 0.002f))
+}
+
 @Composable
 fun SceneCanvas(id: String, modifier: Modifier = Modifier) {
-    Canvas(modifier) { drawWave() }
+    Canvas(modifier) {
+        when (id) {
+            "wwdc26" -> drawGlow()
+            else -> drawWave()
+        }
+    }
 }

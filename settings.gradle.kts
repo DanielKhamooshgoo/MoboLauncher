@@ -7,4 +7,3 @@ dependencyResolutionManagement {
 }
 rootProject.name = "MoboLauncher"
 include(":app")
-include(":probe")

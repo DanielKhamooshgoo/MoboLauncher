@@ -2,6 +2,7 @@ package app.mobolauncher
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -82,33 +84,74 @@ fun DesktopScreen(
     val launch: (AppEntry) -> Unit = { app ->
         if (!launchApp(ctx, app, prefs)) hud("Can't open " + app.label + ".")
     }
+    var menuOpen by remember { mutableStateOf(false) }
+    val menuFocus = remember { FocusRequester() }
+    val now by rememberNow()
+    val clockPattern = if (prefs.clock24) "EEE d MMM  HH:mm" else "EEE d MMM  h:mm a"
+    BackHandler(enabled = menuOpen) { menuOpen = false }
 
-    Column(Modifier.fillMaxSize().padding(top = 16.dp, bottom = 10.dp)) {
-        // Desktop icons stack down the right edge, like a Mac desktop.
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            val message = when {
-                st.loading -> "Loading apps…"
-                st.error != null -> "Couldn't read the app list: " + st.error
-                else -> null
-            }
-            if (message != null) {
-                Txt(message, ui, 20f * d.fs, Modifier.align(Alignment.Center), align = TextAlign.Center)
-            }
-            Column(
-                Modifier.align(Alignment.TopEnd).width(tileCell).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().padding(top = 6.dp, bottom = 10.dp)) {
+            // Slim menu strip: small power logo on the left, small clock on the right.
+            Row(
+                Modifier.fillMaxWidth().height((28 * d.fs).dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (prefs.desktopShortcuts) {
-                    ShortcutTile("Applications", ui, d, d.desktopIcon, onClick = onOpenLibrary) { s -> LaunchpadIcon(s) }
-                    ShortcutTile("System Settings", ui, d, d.desktopIcon, onClick = onOpenSettings) { s -> SystemSettingsIcon(s) }
-                }
-                desktopApps.forEach { app ->
-                    AppTile(app, ui, d, prefs, d.desktopIcon, true) { launch(app) }
+                LogoButton(ui, d) { menuOpen = !menuOpen }
+                Spacer(Modifier.weight(1f))
+                if (prefs.showClock) {
+                    Txt(formatTime(clockPattern, now), ui, 13f * d.fs, shadow = true, maxLines = 1)
                 }
             }
+
+            // Desktop icons stack down the right edge, like a Mac desktop.
+            Box(Modifier.weight(1f).fillMaxWidth().padding(top = 8.dp)) {
+                val message = when {
+                    st.loading -> "Loading apps…"
+                    st.error != null -> "Couldn't read the app list: " + st.error
+                    else -> null
+                }
+                if (message != null) {
+                    Txt(message, ui, 20f * d.fs, Modifier.align(Alignment.Center), align = TextAlign.Center)
+                }
+                Column(
+                    Modifier.align(Alignment.TopEnd).width(tileCell).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (prefs.desktopShortcuts) {
+                        ShortcutTile("Applications", ui, d, d.desktopIcon, onClick = onOpenLibrary) { s -> LaunchpadIcon(s) }
+                        ShortcutTile("System Settings", ui, d, d.desktopIcon, onClick = onOpenSettings) { s -> SystemSettingsIcon(s) }
+                    }
+                    desktopApps.forEach { app ->
+                        AppTile(app, ui, d, prefs, d.desktopIcon, true) { launch(app) }
+                    }
+                }
+            }
+
+            Dock(dockApps, prefs, ui, d, focus, onOpenLibrary, onOpenSettings, launch)
         }
 
-        Dock(dockApps, prefs, ui, d, focus, onOpenLibrary, onOpenSettings, launch)
+        if (menuOpen) {
+            Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { menuOpen = false } })
+            LaunchedEffect(Unit) {
+                if (d.tv) {
+                    delay(150)
+                    try { menuFocus.requestFocus() } catch (e: Exception) { }
+                }
+            }
+            LauncherMenu(
+                ui, d, Modifier.align(Alignment.TopStart).padding(top = (30 * d.fs).dp), menuFocus,
+                onSettings = {
+                    menuOpen = false
+                    onOpenSettings()
+                },
+                onShutDown = {
+                    menuOpen = false
+                    val hint = PowerHelper.openPowerMenu(ctx)
+                    if (hint != null) hud(hint)
+                },
+            )
+        }
     }
 }
 
@@ -164,7 +207,7 @@ fun Dock(
                     app.label, ui, d, prefs, base, magnify(idx),
                     onActive = { on -> if (on) { active = idx } else if (active == idx) { active = -1 } },
                     onClick = { onLaunch(app) },
-                ) { s -> AppIconView(rememberIcon(app), s, prefs.iconStyle, app.label) }
+                ) { s -> AppIconFor(app, s, prefs) }
             }
             Box(Modifier.size(1.dp, base * 0.8f).background(ui.text.copy(alpha = 0.25f)))
             val settingsIdx = apps.size + 1
