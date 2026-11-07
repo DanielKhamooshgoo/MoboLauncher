@@ -169,7 +169,7 @@ private fun NavBack(text: String, ui: Ui, d: Dims, modifier: Modifier, onClick: 
 
 @Composable
 fun SettingsPanel(
-    prefs: LauncherPrefs, ui: Ui, d: Dims, st: AppsState, deviceIsTv: Boolean, isDefault: Boolean,
+    prefs: LauncherPrefs, ui: Ui, d: Dims, st: AppsState, deviceIsTv: Boolean, isDefault: Boolean, canHome: Boolean,
     onPickImage: () -> Unit, onSetDefault: () -> Unit, onPreviewIdle: () -> Unit, onClose: () -> Unit,
 ) {
     var page by remember { mutableStateOf(Page.Main) }
@@ -212,7 +212,7 @@ fun SettingsPanel(
                 contentPadding = PaddingValues(top = 4.dp, bottom = 28.dp),
             ) {
                 when (p) {
-                    Page.Main -> mainPage(prefs, ui, d, st, isDefault, onSetDefault) { page = it }
+                    Page.Main -> mainPage(prefs, ui, d, st, isDefault, canHome, onSetDefault) { page = it }
                     Page.Appearance -> appearancePage(prefs, ui, d)
                     Page.Wallpaper -> wallpaperPage(prefs, ui, d, onPickImage)
                     Page.Display -> displayPage(prefs, ui, d)
@@ -220,7 +220,7 @@ fun SettingsPanel(
                     Page.Apps -> appsPage(prefs, ui, d, st)
                     Page.Idle -> idlePage(prefs, ui, d, onPreviewIdle)
                     Page.Navigation -> navigationPage(prefs, ui, d)
-                    Page.General -> generalPage(prefs, ui, d, deviceIsTv, isDefault, onSetDefault)
+                    Page.General -> generalPage(prefs, ui, d, deviceIsTv, isDefault, canHome, onSetDefault)
                 }
             }
         }
@@ -230,7 +230,7 @@ fun SettingsPanel(
 // ------------------------------------------------------------------ pages
 
 private fun LazyListScope.mainPage(
-    prefs: LauncherPrefs, ui: Ui, d: Dims, st: AppsState, isDefault: Boolean,
+    prefs: LauncherPrefs, ui: Ui, d: Dims, st: AppsState, isDefault: Boolean, canHome: Boolean,
     onSetDefault: () -> Unit, go: (Page) -> Unit,
 ) {
     val themeName = when (prefs.theme) { "light" -> "Light"; "dark" -> "Dark"; else -> "Automatic" }
@@ -239,7 +239,7 @@ private fun LazyListScope.mainPage(
     val idleName = if (prefs.idleMinutes == 0) "Never" else prefs.idleMinutes.toString() + " min"
     val dockCount = prefs.dock.count { pkg -> st.apps.any { it.pkg == pkg } }
 
-    if (!isDefault) {
+    if (canHome && !isDefault) {
         group {
             row { i, n ->
                 SetRow(
@@ -442,16 +442,25 @@ private fun LazyListScope.navigationPage(prefs: LauncherPrefs, ui: Ui, d: Dims) 
 }
 
 private fun LazyListScope.generalPage(
-    prefs: LauncherPrefs, ui: Ui, d: Dims, deviceIsTv: Boolean, isDefault: Boolean, onSetDefault: () -> Unit,
+    prefs: LauncherPrefs, ui: Ui, d: Dims, deviceIsTv: Boolean, isDefault: Boolean, canHome: Boolean, onSetDefault: () -> Unit,
 ) {
     header("Home App", ui, d)
     group {
-        row { i, n -> SetRow(ui, d, i, n, "Default launcher", value = if (isDefault) "Mobo Launcher" else "Not set") }
-        if (!isDefault) {
+        row { i, n ->
+            SetRow(
+                ui, d, i, n, "Default launcher",
+                value = if (!canHome) "Not available" else if (isDefault) "Mobo Launcher" else "Not set",
+            )
+        }
+        if (canHome && !isDefault) {
             row { i, n -> SetRow(ui, d, i, n, "Make Mobo Launcher the default", titleColor = ui.accent, chevron = true, onClick = onSetDefault) }
         }
     }
-    footer("The status is read from Android. Android may ask you to confirm. To undo it, choose another Home app in Android's own settings.", ui, d)
+    footer(
+        if (canHome) "The status is read from Android. Android may ask you to confirm. To undo it, choose another Home app in Android's own settings."
+        else "This version does not register as a Home app, so Android will not offer it as the default launcher and the Home button keeps opening the device's own launcher.",
+        ui, d,
+    )
     gap()
     header("About", ui, d)
     group {

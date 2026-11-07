@@ -74,6 +74,12 @@ fun isDefaultLauncher(ctx: Context): Boolean {
     return ri?.activityInfo?.packageName == ctx.packageName
 }
 
+/** True when this build declares a Home activity, i.e. Android could offer it as the Home app. */
+fun canBeHome(ctx: Context): Boolean {
+    val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+    return ctx.packageManager.queryIntentActivities(home, 0).any { it.activityInfo.packageName == ctx.packageName }
+}
+
 fun defaultDock(apps: List<AppEntry>): List<String> {
     val preferred = listOf(
         "com.google.android.youtube.tv", "com.netflix.ninja", "com.google.android.youtube",

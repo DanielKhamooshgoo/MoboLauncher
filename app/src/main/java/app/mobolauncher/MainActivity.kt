@@ -173,6 +173,7 @@ fun LauncherRoot(
     prefs: LauncherPrefs, host: HostState, deviceIsTv: Boolean, onRequestDefault: () -> String?,
 ) {
     val ctx = LocalContext.current
+    val canHome = remember { canBeHome(ctx) }
     var apps by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -337,7 +338,7 @@ fun LauncherRoot(
                             .pointerInput(Unit) { detectTapGestures { } },
                     ) {
                         SettingsPanel(
-                            prefs, ui, d, st, deviceIsTv, host.isDefault,
+                            prefs, ui, d, st, deviceIsTv, host.isDefault, canHome,
                             onPickImage = {
                                 try {
                                     picker.launch(arrayOf("image/*"))

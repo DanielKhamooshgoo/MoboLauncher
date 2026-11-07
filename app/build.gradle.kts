@@ -42,6 +42,12 @@ android {
             applicationIdSuffix = ".home"
             versionNameSuffix = "-home"
         }
+        // Diagnostic: Home filter only (no stateNotNeeded), to see what the box installer rejects.
+        create("hfilter") {
+            dimension = "mode"
+            applicationIdSuffix = ".hf"
+            versionNameSuffix = "-hf"
+        }
     }
 
     compileOptions {
